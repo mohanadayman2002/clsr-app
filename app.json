@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "CLSR",
+    "slug": "clsr",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.clsr.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CLSR uses the camera to photograph your floor plan.",
+        "NSPhotoLibraryUsageDescription": "CLSR needs access to your photos to import floor plans and save renders."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F5F2",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.clsr.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-image",
+      "expo-sharing",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#F7F5F2",
+          "dark": {
+            "backgroundColor": "#141311"
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CLSR needs access to your photos to import floor plans.",
+          "cameraPermission": "CLSR uses the camera to photograph your floor plan."
+        }
+      ]
+    ],
+    "scheme": "clsr"
+  }
+}
