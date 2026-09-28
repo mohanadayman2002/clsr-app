@@ -14,8 +14,11 @@ export function formatArea(sqm?: number): string | undefined {
   return sqm == null ? undefined : `${sqm} m²`;
 }
 
-export function formatFileSize(bytes?: number): string | undefined {
-  if (bytes == null) return undefined;
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+export function formatEGP(amount: number): string {
+  return `EGP ${Math.round(amount).toLocaleString('en-US')}`;
+}
+
+/** "living and dining" → "Living and dining" */
+export function capitalize(s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
 }

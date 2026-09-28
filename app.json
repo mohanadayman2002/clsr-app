@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CLSR",
+    "name": "CLSR Studio",
     "slug": "clsr",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,12 @@
       "bundleIdentifier": "com.clsr.app",
       "infoPlist": {
         "NSCameraUsageDescription": "CLSR uses the camera to photograph your floor plan.",
-        "NSPhotoLibraryUsageDescription": "CLSR needs access to your photos to import floor plans and save renders."
+        "NSPhotoLibraryUsageDescription": "CLSR needs access to your photos to import floor plans and save renders.",
+        "NSLocalNetworkUsageDescription": "CLSR Studio connects to your CLSR server on the local network.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        }
       }
     },
     "android": {
@@ -48,6 +53,14 @@
         {
           "photosPermission": "CLSR needs access to your photos to import floor plans.",
           "cameraPermission": "CLSR uses the camera to photograph your floor plan."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],

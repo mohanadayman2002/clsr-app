@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,8 +13,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import type { IconName } from '@/lib/catalog';
 import { radius, spacing, typography, useAppTheme, type Colors } from '@/theme';
+
+export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 type Variant = keyof typeof typography;
 

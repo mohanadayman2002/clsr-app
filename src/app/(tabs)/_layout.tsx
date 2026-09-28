@@ -1,15 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Redirect } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
 
-import { useSettings } from '@/store/settings';
 import { useAppTheme } from '@/theme';
 
 export default function TabsLayout() {
-  const { settings } = useSettings();
   const { colors } = useAppTheme();
-
-  if (!settings.hasSeenOnboarding) return <Redirect href="/onboarding" />;
 
   return (
     <Tabs
@@ -22,19 +17,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Projects',
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={size} />
-          ),
+          title: 'Flats',
+          tabBarIcon: ({ color, focused, size }) => <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons name={focused ? 'settings' : 'settings-outline'} color={color} size={size} />
-          ),
+          title: 'Server',
+          tabBarIcon: ({ color, focused, size }) => <Ionicons name={focused ? 'server' : 'server-outline'} color={color} size={size} />,
         }}
       />
     </Tabs>

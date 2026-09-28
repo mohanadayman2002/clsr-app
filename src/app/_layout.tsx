@@ -4,8 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ProjectsProvider } from '@/store/projects';
-import { SettingsProvider, useSettings } from '@/store/settings';
+import { ServerProvider, useServer } from '@/store/server';
 import { useAppTheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -13,17 +12,15 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <SettingsProvider>
-        <ProjectsProvider>
-          <RootNavigator />
-        </ProjectsProvider>
-      </SettingsProvider>
+      <ServerProvider>
+        <RootNavigator />
+      </ServerProvider>
     </SafeAreaProvider>
   );
 }
 
 function RootNavigator() {
-  const { ready } = useSettings();
+  const { ready } = useServer();
   const { colors, isDark } = useAppTheme();
 
   useEffect(() => {
@@ -56,10 +53,8 @@ function RootNavigator() {
           contentStyle: { backgroundColor: colors.background },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="new" options={{ headerShown: false, presentation: 'modal' }} />
-        <Stack.Screen name="project/[id]/index" options={{ title: '' }} />
-        <Stack.Screen name="project/[id]/room/[roomId]" options={{ title: '' }} />
+        <Stack.Screen name="flat/[number]/index" options={{ title: '' }} />
+        <Stack.Screen name="flat/[number]/room/[index]" options={{ title: '' }} />
       </Stack>
     </ThemeProvider>
   );

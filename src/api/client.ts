@@ -1,31 +1,55 @@
-import type { CreateProjectInput, DetectedRoom, FloorPlanFile, Project } from './types';
+import type {
+  BuildStatus,
+  Catalog,
+  Change,
+  Colour,
+  Costs,
+  DressingCatalog,
+  Finish,
+  Health,
+  Job,
+  JobState,
+  Palette,
+  Project,
+  ProjectSummary,
+  Quality,
+  Style,
+  Tier,
+  UploadInput,
+} from './types';
 
 /**
- * Everything the app needs from the CLSR system.
- *
- * The UI only talks to this interface. `MockClsrClient` implements it today;
- * a real HTTP implementation goes next to it once the API spec is available.
+ * Everything the app calls on CLSR Studio. `HttpClsrApi` talks to the real
+ * server; `DemoClsrApi` serves built-in sample data so the app is usable
+ * without one.
  */
-export interface ClsrClient {
-  /** True when this client is a local simulation, not the real CLSR backend. */
-  readonly isMock: boolean;
+export interface ClsrApi {
+  readonly isDemo: boolean;
 
-  /** Detect rooms in a floor plan so the user can review them before generating. */
-  analyzeFloorPlan(file: FloorPlanFile): Promise<DetectedRoom[]>;
+  /** Absolute URL for a server path such as `/thumbs/...` or `/runs/...`. */
+  resolve(path: string): string;
 
-  /** Upload the floor plan and start the furnish + render pipeline. */
-  createProject(input: CreateProjectInput): Promise<Project>;
+  health(): Promise<Health>;
+  projects(): Promise<ProjectSummary[]>;
+  project(n: number): Promise<Project>;
+  job(n: number): Promise<JobState>;
+  costs(n: number, tier?: Tier): Promise<Costs>;
 
-  listProjects(): Promise<Project[]>;
+  catalog(asset: string, run: number): Promise<Catalog>;
+  dressing(kind: 'art' | 'model', run: number, role?: string): Promise<DressingCatalog>;
+  finishes(target: 'floor' | 'wall'): Promise<Finish[]>;
+  styles(): Promise<Style[]>;
+  colours(): Promise<Colour[]>;
+  palette(style: string): Promise<Palette>;
 
-  /** Fetch the latest state of a project. Polled while the pipeline runs. */
-  getProject(id: string): Promise<Project>;
+  status(n: number): Promise<BuildStatus>;
+  batch(n: number, changes: Change[], quality: Quality, view?: string): Promise<Job>;
+  undo(n: number, historyId: string): Promise<Job>;
+  upload(input: UploadInput): Promise<{ number: number; mode: string }>;
+}
 
-  deleteProject(id: string): Promise<void>;
-
-  /** Ask CLSR for a fresh set of renders for one room. */
-  regenerateRoom(projectId: string, roomId: string): Promise<Project>;
-
-  /** Restart a failed project. */
-  retryProject(id: string): Promise<Project>;
+/** Server path of a rendered frame; `bust` is appended as ?t= after a re-render. */
+export function framePath(number: number, image: string, bust?: number): string {
+  const path = `/runs/${String(number).padStart(4, '0')}/result/final/frames/${image}`;
+  return bust ? `${path}?t=${bust}` : path;
 }

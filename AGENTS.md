@@ -42,6 +42,7 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## This project
 
-- The app is the mobile client for the CLSR system (2D floor plan → furnished apartment → room renders). See README.md.
-- Screens must talk to CLSR only through the `ClsrClient` interface (`src/api/client.ts`) via the `clsr` instance from `@/api`. `MockClsrClient` is used until the real API is implemented.
+- Mobile client for CLSR Studio (floor plan → furnished, rendered flat → retouch via hotspots). See README.md.
+- Screens call the server only through the `ClsrApi` from `useApi()` (`src/store/server.tsx`). `HttpClsrApi` is real and `DemoClsrApi` is sample data. Keep `src/api/types.ts` identical to the server payloads.
+- `project()` in `src/lib/hotspots.ts` must stay equivalent to the server's reference implementation. Run `npm test` after touching it.
 - Shared UI lives in `src/components`, and theme tokens in `src/theme`. Use `useAppTheme()` for colours rather than hard-coding them.
