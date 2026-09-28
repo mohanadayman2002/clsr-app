@@ -107,6 +107,10 @@ export class DemoClsrApi implements ClsrApi {
     return path;
   }
 
+  imageSource(path: string) {
+    return { uri: path };
+  }
+
   /** The room and view a demo frame path refers to, so it can be drawn instead of loaded. */
   frameFor(path: string): { room: Room; view: View } | undefined {
     const image = path.split('?')[0].split('/').pop();

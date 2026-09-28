@@ -29,6 +29,9 @@ export interface ClsrApi {
   /** Absolute URL for a server path such as `/thumbs/...` or `/runs/...`. */
   resolve(path: string): string;
 
+  /** Image source for a server path, carrying the access token header when one is set. */
+  imageSource(path: string): { uri: string; headers?: Record<string, string> };
+
   health(): Promise<Health>;
   projects(): Promise<ProjectSummary[]>;
   project(n: number): Promise<Project>;

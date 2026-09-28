@@ -16,7 +16,10 @@ import { radius, spacing, useAppTheme } from '@/theme';
 export default function FlatsScreen() {
   const { api, demo, host, reachability, checkHealth } = useServer();
   // Don't sit through a request timeout when the health check already failed.
-  const offline = !demo && reachability.state === 'unreachable';
+  const healthError =
+    demo || reachability.state === 'ok' || reachability.state === 'checking' || reachability.state === 'unknown'
+      ? undefined
+      : new ClsrError(reachability.state, '');
   const { colors } = useAppTheme();
   const flats = useResource(api ? () => api.projects() : null, `${host}|${demo}`);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,11 +56,11 @@ export default function FlatsScreen() {
         ListEmptyComponent={
           !api ? (
             <ConnectCard />
-          ) : (flats.error || offline) && !flats.data ? (
+          ) : (flats.error || healthError) && !flats.data ? (
             <EmptyState
-              icon="cloud-offline-outline"
+              icon={reachability.state === 'unauthorized' ? 'key-outline' : 'cloud-offline-outline'}
               title="Can't load flats"
-              message={describeError(flats.error ?? new ClsrError('unreachable', ''))}
+              message={describeError(flats.error ?? healthError)}
               action={
                 <View style={styles.row}>
                   <Button title="Try again" variant="secondary" compact onPress={onRefresh} />

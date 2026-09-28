@@ -35,6 +35,8 @@ export default function ServerScreen() {
                   <Badge label="Demo" tone="warning" />
                 ) : reachability.state === 'ok' ? (
                   <Badge label="Online" tone="success" />
+                ) : reachability.state === 'unauthorized' ? (
+                  <Badge label="Token rejected" tone="danger" />
                 ) : reachability.state === 'checking' ? (
                   <Badge label="Checking…" />
                 ) : (
@@ -66,7 +68,7 @@ export default function ServerScreen() {
         )}
 
         <View>
-          <SectionHeader title={host || demo ? 'Change server' : 'Connect'} />
+          <SectionHeader title={host || demo ? 'Address and token' : 'Connect'} />
           <ConnectCard showDemo={!demo} />
         </View>
 

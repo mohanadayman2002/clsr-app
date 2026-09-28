@@ -14,7 +14,7 @@ npm run typecheck
 npm run lint
 ```
 
-On first launch, enter the CLSR PC's address (for example `192.168.1.20`; port 8765 is added if you leave it out), or tap **Try demo**. Demo mode uses built-in sample flats and draws each frame as a line drawing from its camera data, since there are no real photos.
+On first launch the address field is prefilled with the studio PC's ZeroTier address, `http://10.37.122.125:8765`. Tap **Connect**, or change the address; the port is added if you leave it out. The **access token** field is only needed if the server runs with `CLSR_TOKEN` set. You can change both later in the **Server** tab, and they are remembered (the token goes in the Keychain/Keystore). Or tap **Try demo**. Demo mode uses built-in sample flats and draws each frame as a line drawing from its camera data, since there are no real photos.
 
 ## Status
 
@@ -57,5 +57,8 @@ src/
 The tests check the maths against hand-computed values. They have not yet been checked against a real Cycles frame.
 
 ## Networking
+
+- Every request, image loads included, carries `X-CLSR-Token` when a token is set. A **401** shows as "token rejected" and a **409** as "this flat is being changed". Neither is treated as a crash.
+- If the health check fails, the app shows the unreachable state right away instead of waiting for request timeouts.
 
 The server uses plain HTTP on a LAN or VPN address, so `app.json` allows cleartext traffic. On Android this is `usesCleartextTraffic` via `expo-build-properties`. On iOS it is the ATS `NSAllowsArbitraryLoads` setting plus a local-network usage string. Tighten this if the server ever moves to a hosted HTTPS address.

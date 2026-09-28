@@ -54,7 +54,7 @@ export function FrameImage({
   if (api.isDemo) return <DemoFrame room={room} view={view} width={width} height={height} />;
   return (
     <Image
-      source={{ uri: api.resolve(framePath(number, view.image, bust)) }}
+      source={api.imageSource(framePath(number, view.image, bust))}
       style={{ width, height }}
       contentFit="cover"
       transition={150}
@@ -70,7 +70,7 @@ export function FramePathImage({ api, path, width, height }: { api: ClsrApi; pat
     const frame = api.frameFor(path);
     return frame ? <DemoFrame {...frame} width={width} height={height} /> : null;
   }
-  return <Image source={{ uri: api.resolve(path) }} style={{ width, height }} contentFit="cover" transition={150} />;
+  return <Image source={api.imageSource(path)} style={{ width, height }} contentFit="cover" transition={150} />;
 }
 
 function DemoFrame({ room, view, width, height }: { room: Room; view: FrameView; width: number; height: number }) {

@@ -21,6 +21,7 @@ import type {
 } from './types';
 
 const DEFAULT_PORT = 8765;
+const TOKEN_HEADER = 'X-CLSR-Token';
 const TIMEOUT_MS = 10000;
 const UPLOAD_TIMEOUT_MS = 120000;
 
@@ -37,10 +38,23 @@ export function normalizeHost(input: string): string {
 export class HttpClsrApi implements ClsrApi {
   readonly isDemo = false;
 
-  constructor(readonly baseUrl: string) {}
+  /** `token` is only needed when the server runs with CLSR_TOKEN set. */
+  constructor(
+    readonly baseUrl: string,
+    private readonly token?: string,
+  ) {}
 
   resolve(path: string): string {
     return /^https?:\/\//i.test(path) ? path : `${this.baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+
+  private authHeaders(): Record<string, string> {
+    return this.token ? { [TOKEN_HEADER]: this.token } : {};
+  }
+
+  imageSource(path: string) {
+    const uri = this.resolve(path);
+    return this.token ? { uri, headers: this.authHeaders() } : { uri };
   }
 
   private async request<T>(path: string, init?: RequestInit, timeoutMs = TIMEOUT_MS): Promise<T> {
@@ -48,7 +62,11 @@ export class HttpClsrApi implements ClsrApi {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     let res: Response;
     try {
-      res = await fetch(this.resolve(path), { ...init, signal: controller.signal });
+      res = await fetch(this.resolve(path), {
+        ...init,
+        headers: { ...this.authHeaders(), ...(init?.headers as Record<string, string> | undefined) },
+        signal: controller.signal,
+      });
     } catch {
       throw new ClsrError('unreachable', `Can't reach ${this.baseUrl}`);
     } finally {
@@ -65,7 +83,16 @@ export class HttpClsrApi implements ClsrApi {
 
     const serverError = (body as { error?: unknown } | undefined)?.error;
     const message = serverError ? String(serverError) : `Server responded ${res.status}`;
-    const kind = res.status === 409 ? 'busy' : res.status === 404 ? 'not_found' : res.status === 400 ? 'bad_request' : 'server';
+    const kind =
+      res.status === 401
+        ? 'unauthorized'
+        : res.status === 409
+          ? 'busy'
+          : res.status === 404
+            ? 'not_found'
+            : res.status === 400
+              ? 'bad_request'
+              : 'server';
     throw new ClsrError(kind, message, res.status);
   }
 
