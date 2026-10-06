@@ -27,6 +27,17 @@ On first launch the address field is prefilled with the studio PC's ZeroTier add
 | 4 | Costs: room subtotals and whole-flat bill | totals shown; full bill next |
 | 5 | Upload a plan with style and budget, follow `/api/status` | next |
 
+## Design
+
+The app has a dark "studio" look so the renders supply the colour. Headings are set in Fraunces (serif), interface text in Inter, and measurements and prices in JetBrains Mono, like annotations on a drawing. Brass (`#E0A458`) marks anything you can act on.
+
+- **Floor plan** (`src/components/plan.tsx`): the flat drawn from each room's `rect_m`, north up, with a cone for every camera (its angle comes from the lens). Tap a room, or a cone to open that exact view. The same component is the mini-map on the room screen.
+- **Hotspots**: pulsing brass rings; the selected one shows its name.
+- **The bill** is a receipt with dotted price lines and a tilted "Estimate · not a quotation" stamp, so an estimate never reads as a quote.
+- **Tab bar**: a floating pill, so photos run to the bottom edge.
+
+Tokens live in `src/theme`; shared pieces (`Leader`, `Stamp`, `LiveDot`, `PressableScale`) live in `src/components/ui.tsx`.
+
 ## Layout
 
 ```

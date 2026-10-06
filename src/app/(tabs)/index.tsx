@@ -1,17 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClsrError, describeError, type ClsrApi, type ProjectSummary } from '@/api';
 import { ConnectCard } from '@/components/connect';
 import { FrameBox, FramePathImage } from '@/components/frame';
-import { AppText, Badge, Button, Card, EmptyState } from '@/components/ui';
+import { StatusLine } from '@/components/status';
+import { AppText, Button, EmptyState, PressableScale } from '@/components/ui';
 import { capitalize, formatRelativeDate } from '@/lib/format';
 import { useResource } from '@/lib/useResource';
 import { useServer } from '@/store/server';
-import { radius, spacing, useAppTheme } from '@/theme';
+import { fonts, radius, spacing, TAB_BAR_CLEARANCE, typography, useAppTheme } from '@/theme';
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
 
 export default function FlatsScreen() {
   const { api, demo, host, reachability, checkHealth } = useServer();
@@ -23,6 +27,7 @@ export default function FlatsScreen() {
   const { colors } = useAppTheme();
   const flats = useResource(api ? () => api.projects() : null, `${host}|${demo}`);
   const [refreshing, setRefreshing] = useState(false);
+  const count = flats.data?.length ?? 0;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -37,44 +42,44 @@ export default function FlatsScreen() {
         keyExtractor={(p) => String(p.number)}
         contentContainerStyle={styles.content}
         refreshControl={api ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} /> : undefined}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.lg }} />}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.xl }} />}
         ListHeaderComponent={
           <View style={styles.header}>
-            <AppText variant="overline">CLSR Studio</AppText>
-            <AppText variant="display">Flats</AppText>
-            {demo && (
-              <View style={[styles.banner, { backgroundColor: colors.warningSoft }]}>
-                <Ionicons name="flask-outline" size={16} color={colors.warning} />
-                <AppText variant="caption" style={[styles.flex, { color: colors.warning }]}>
-                  Demo data. Connect to your CLSR server in the Server tab.
-                </AppText>
-              </View>
+            <StatusLine />
+            <View>
+              <AppText variant="hero">Every room,</AppText>
+              <Text style={[typography.hero, { fontFamily: fonts.displayItalic, color: colors.accent }]}>rendered.</Text>
+            </View>
+            {api && count > 0 && (
+              <AppText variant="overline" style={styles.count}>
+                {pad2(count)} {count === 1 ? 'flat' : 'flats'} in the studio
+              </AppText>
             )}
           </View>
         }
-        renderItem={({ item }) => <FlatCard flat={item} api={api!} />}
+        renderItem={({ item, index }) => <FlatCard flat={item} api={api!} position={`${pad2(index + 1)}/${pad2(count)}`} />}
         ListEmptyComponent={
           !api ? (
             <ConnectCard />
           ) : (flats.error || healthError) && !flats.data ? (
             <EmptyState
               icon={reachability.state === 'unauthorized' ? 'key-outline' : 'cloud-offline-outline'}
-              title="Can't load flats"
+              title={reachability.state === 'unauthorized' ? 'Locked out' : 'The studio is quiet'}
               message={describeError(flats.error ?? healthError)}
               action={
                 <View style={styles.row}>
                   <Button title="Try again" variant="secondary" compact onPress={onRefresh} />
-                  <Button title="Server settings" variant="ghost" compact onPress={() => router.navigate('/settings')} />
+                  <Button title="Studio link" variant="ghost" compact onPress={() => router.navigate('/settings')} />
                 </View>
               }
             />
           ) : flats.loading ? (
             <View style={styles.loader}>
-              <ActivityIndicator color={colors.textMuted} />
-              <AppText variant="caption">{demo ? 'Loading…' : `Connecting to ${host.replace(/^https?:\/\//, '')}…`}</AppText>
+              <ActivityIndicator color={colors.accent} />
+              <AppText variant="overline">{demo ? 'Loading' : `Calling ${host.replace(/^https?:\/\//, '')}`}</AppText>
             </View>
           ) : (
-            <EmptyState icon="home-outline" title="No flats yet" message="Finished flats from CLSR will appear here." />
+            <EmptyState icon="cube-outline" title="Nothing on the easel" message="Finished flats from CLSR will appear here." />
           )
         }
       />
@@ -82,54 +87,54 @@ export default function FlatsScreen() {
   );
 }
 
-function FlatCard({ flat, api }: { flat: ProjectSummary; api: ClsrApi }) {
+function FlatCard({ flat, api, position }: { flat: ProjectSummary; api: ClsrApi; position: string }) {
   const { colors } = useAppTheme();
   return (
-    <Card padded={false} onPress={() => router.push(`/flat/${flat.number}`)}>
-      <View style={[styles.cover, { backgroundColor: colors.surfaceMuted }]}>
-        {flat.cover ? (
-          <View style={StyleSheet.absoluteFill}>
-            <FrameBox>{(size) => <FramePathImage api={api} path={flat.cover!} {...size} />}</FrameBox>
-          </View>
-        ) : (
+    <PressableScale onPress={() => router.push(`/flat/${flat.number}`)} style={[styles.card, { backgroundColor: colors.surface }]}>
+      {flat.cover ? (
+        <FrameBox>{(size) => <FramePathImage api={api} path={flat.cover!} {...size} />}</FrameBox>
+      ) : (
+        <View style={[styles.placeholder, { backgroundColor: colors.surfaceMuted }]}>
           <Ionicons name="image-outline" size={36} color={colors.textFaint} />
-        )}
-        <View style={styles.number}>
-          <AppText variant="label" style={styles.numberText}>
-            #{flat.number}
-          </AppText>
         </View>
+      )}
+      <LinearGradient colors={['rgba(15,14,12,0)', 'rgba(15,14,12,0.35)', 'rgba(15,14,12,0.96)']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+
+      <Text style={[typography.overline, styles.position, { color: colors.text }]}>{position}</Text>
+
+      <View style={styles.caption}>
+        <View style={styles.titleRow}>
+          <Text style={[typography.display, styles.number, { color: colors.text }]}>
+            <Text style={{ fontFamily: fonts.displayItalic, color: colors.accent }}>№</Text>
+            {flat.number}
+          </Text>
+          <View style={styles.flex}>
+            <Text style={[typography.italic, { color: colors.text }]}>{capitalize(flat.style)}</Text>
+            <Text style={[typography.overline, { color: colors.textFaint, fontSize: 10 }]}>{formatRelativeDate(flat.created)}</Text>
+            <Text style={[typography.overline, { color: colors.textMuted, fontSize: 10 }]}>
+              {flat.rooms} rooms · {flat.frames} frames
+            </Text>
+          </View>
+        </View>
+        <Text style={[typography.overline, { color: colors.textMuted, fontSize: 10 }]} numberOfLines={1}>
+          {flat.labels.join('  /  ')}
+        </Text>
       </View>
-      <View style={styles.body}>
-        <View style={styles.row}>
-          <AppText variant="heading" style={styles.flex}>
-            {capitalize(flat.style)}
-          </AppText>
-          <AppText variant="caption">{formatRelativeDate(flat.created)}</AppText>
-        </View>
-        <AppText variant="caption">
-          {flat.rooms} rooms · {flat.frames} photos
-        </AppText>
-        <View style={styles.labels}>
-          {flat.labels.map((l) => (
-            <Badge key={l} label={capitalize(l)} />
-          ))}
-        </View>
-      </View>
-    </Card>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: spacing.xl, paddingBottom: spacing.xxl * 2 },
-  header: { gap: spacing.sm, marginBottom: spacing.xl },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, marginTop: spacing.sm },
-  cover: { aspectRatio: 1800 / 1350, alignItems: 'center', justifyContent: 'center' },
-  number: { position: 'absolute', top: spacing.md, left: spacing.md, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 2 },
-  numberText: { color: '#fff' },
-  body: { padding: spacing.lg, gap: spacing.xs },
+  content: { padding: spacing.xl, paddingTop: spacing.lg, paddingBottom: TAB_BAR_CLEARANCE },
+  header: { gap: spacing.lg, marginBottom: spacing.xl },
+  count: { marginTop: spacing.xs },
+  card: { borderRadius: radius.xl, overflow: 'hidden' },
+  placeholder: { aspectRatio: 1800 / 1350, alignItems: 'center', justifyContent: 'center' },
+  position: { position: 'absolute', top: spacing.lg, right: spacing.lg, fontSize: 10 },
+  caption: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg, gap: spacing.sm },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
+  number: { fontSize: 46, lineHeight: 50 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  labels: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
-  loader: { marginTop: spacing.xxl, alignItems: 'center', gap: spacing.sm },
+  loader: { marginTop: spacing.xxl, alignItems: 'center', gap: spacing.md },
 });

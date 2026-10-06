@@ -1,14 +1,24 @@
 import { Image } from 'expo-image';
-import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Polyline, Rect } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  Animated,
+  Easing,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import Svg, { Defs, LinearGradient as SvgGradient, Polyline, Rect, Stop } from 'react-native-svg';
 
 import { DemoClsrApi, framePath, type ClsrApi, type Room, type View as FrameView } from '@/api';
 import type { Hotspot } from '@/lib/hotspots';
-import { roomWireframe } from '@/lib/wireframe';
-import { useAppTheme } from '@/theme';
-
-import { AppText } from './ui';
+import { roomWireframe, type Stroke } from '@/lib/wireframe';
+import { typography, useAppTheme } from '@/theme';
 
 /** CLSR frames are rendered at 1800×1350. */
 export const FRAME_ASPECT = 1800 / 1350;
@@ -74,36 +84,49 @@ export function FramePathImage({ api, path, width, height }: { api: ClsrApi; pat
 }
 
 function DemoFrame({ room, view, width, height }: { room: Room; view: FrameView; width: number; height: number }) {
+  const { colors } = useAppTheme();
   const strokes = useMemo(() => roomWireframe(room, view.camera, FRAME_ASPECT), [room, view]);
+  const styleFor = (s: Stroke) =>
+    s.kind === 'shell'
+      ? { stroke: colors.line, strokeWidth: 1.2, opacity: 0.7 }
+      : s.kind === 'art'
+        ? { stroke: colors.accent, strokeWidth: 1.6, opacity: 1 }
+        : { stroke: colors.text, strokeWidth: 1.3, opacity: 0.85 };
   return (
     <View style={{ width, height }}>
       <Svg width={width} height={height}>
-        <Rect x={0} y={0} width={width} height={height} fill="#EFEAE3" />
+        <Defs>
+          <SvgGradient id="room" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#1E1B17" />
+            <Stop offset="0.55" stopColor="#15130F" />
+            <Stop offset="1" stopColor="#201C17" />
+          </SvgGradient>
+        </Defs>
+        <Rect x={0} y={0} width={width} height={height} fill="url(#room)" />
         {strokes.map((s, i) => (
           <Polyline
             key={i}
             points={s.points.map(([u, v]) => `${u * width},${v * height}`).join(' ')}
-            stroke={s.colour}
-            strokeWidth={s.width}
+            {...styleFor(s)}
             strokeLinejoin="round"
+            strokeLinecap="round"
             fill="none"
           />
         ))}
       </Svg>
-      {width >= 240 && (
+      {width >= 380 && (
         <View style={styles.demoTag}>
-          <AppText variant="caption" style={styles.demoTagText}>
-            Demo frame · drawn from camera data
-          </AppText>
+          <Text style={[typography.overline, styles.demoTagText, { color: colors.textMuted }]}>Demo · line render from camera data</Text>
         </View>
       )}
     </View>
   );
 }
 
-const DOT = 26;
+const DOT = 14;
+const RING = 34;
 
-/** Tappable dots over a frame. Positions come from `roomHotspots`. */
+/** Tappable, softly pulsing dots over a frame. Positions come from `roomHotspots`. */
 export function HotspotLayer({
   hotspots,
   width,
@@ -120,29 +143,67 @@ export function HotspotLayer({
   onPress: (hotspot: Hotspot) => void;
 }) {
   const { colors } = useAppTheme();
+  const [pulse] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(pulse, { toValue: 1, duration: 2200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const press = (h: Hotspot) => {
+    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+    onPress(h);
+  };
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {hotspots.map((h) => {
         const selected = h.id === selectedId;
         const queued = queuedIds?.has(h.id);
+        const x = h.u * width;
+        const y = h.v * height;
         return (
-          <Pressable
-            key={h.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Change ${h.label}`}
-            hitSlop={10}
-            onPress={() => onPress(h)}
-            style={[
-              styles.dot,
-              {
-                left: h.u * width - DOT / 2,
-                top: h.v * height - DOT / 2,
-                borderColor: selected ? colors.accent : '#FFFFFF',
-                backgroundColor: selected || queued ? colors.accent : 'rgba(20,19,17,0.45)',
-              },
-            ]}>
-            <View style={[styles.dotCore, { backgroundColor: queued ? '#FFFFFF' : selected ? '#FFFFFF' : colors.accent }]} />
-          </Pressable>
+          <View key={h.id} style={[styles.spot, { left: x - RING / 2, top: y - RING / 2 }]} pointerEvents="box-none">
+            {!selected && (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.ring,
+                  {
+                    borderColor: colors.accent,
+                    opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.9, 0] }),
+                    transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] }) }],
+                  },
+                ]}
+              />
+            )}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Change ${h.label}`}
+              hitSlop={12}
+              onPress={() => press(h)}
+              style={[
+                styles.dot,
+                selected && styles.dotSelected,
+                {
+                  backgroundColor: selected || queued ? colors.accent : 'rgba(15,14,12,0.55)',
+                  borderColor: selected ? colors.text : colors.accent,
+                },
+              ]}>
+              {!selected && <View style={[styles.core, { backgroundColor: queued ? colors.onAccent : colors.accent }]} />}
+            </Pressable>
+            {selected && (
+              <View
+                pointerEvents="none"
+                style={[styles.callout, h.u > 0.6 ? { right: RING - 2 } : { left: RING - 2 }, { backgroundColor: colors.overlay, borderColor: colors.accent }]}>
+                <Text style={[typography.overline, { color: colors.accent }]} numberOfLines={1}>
+                  {h.label}
+                </Text>
+              </View>
+            )}
+          </View>
         );
       })}
     </View>
@@ -150,21 +211,28 @@ export function HotspotLayer({
 }
 
 const styles = StyleSheet.create({
-  demoTag: { position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  demoTagText: { color: '#fff', fontSize: 11 },
+  demoTag: { position: 'absolute', left: 10, bottom: 10 },
+  demoTagText: { fontSize: 9 },
+  spot: { position: 'absolute', width: RING, height: RING, alignItems: 'center', justifyContent: 'center' },
+  ring: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 1.5 },
   dot: {
-    position: 'absolute',
-    width: DOT,
-    height: DOT,
-    borderRadius: DOT / 2,
-    borderWidth: 2,
+    width: DOT + 6,
+    height: DOT + 6,
+    borderRadius: (DOT + 6) / 2,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 3,
   },
-  dotCore: { width: 8, height: 8, borderRadius: 4 },
+  dotSelected: { width: 24, height: 24, borderRadius: 12, borderWidth: 3 },
+  core: { width: 6, height: 6, borderRadius: 3 },
+  callout: {
+    position: 'absolute',
+    top: RING / 2 - 13,
+    height: 26,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    borderRadius: 13,
+    borderWidth: 1,
+    maxWidth: 200,
+  },
 });

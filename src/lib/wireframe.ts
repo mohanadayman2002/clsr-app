@@ -7,8 +7,9 @@ const SAMPLES = 32;
 
 export interface Stroke {
   points: [number, number][];
-  colour: string;
-  width: number;
+  kind: 'shell' | 'piece' | 'art';
+  /** The item's own colour (pieces only). */
+  colour?: string;
 }
 
 /**
@@ -47,16 +48,16 @@ function box(lo: Vec3, hi: Vec3): [Vec3, Vec3][] {
 /** Line drawing of a room from a camera: walls, furniture boxes and pictures. Demo mode only. */
 export function roomWireframe(room: Room, cam: Camera, aspect: number): Stroke[] {
   const strokes: Stroke[] = [];
-  const add = (edges: [Vec3, Vec3][], colour: string, width: number) => {
+  const add = (edges: [Vec3, Vec3][], kind: Stroke['kind'], colour?: string) => {
     for (const [a, b] of edges) {
-      for (const points of segment(cam, a, b, aspect)) strokes.push({ points, colour, width });
+      for (const points of segment(cam, a, b, aspect)) strokes.push({ points, kind, colour });
     }
   };
 
   const [x0, y0, x1, y1] = room.rect_m;
-  add(box([Math.min(x0, x1), Math.min(y0, y1), 0], [Math.max(x0, x1), Math.max(y0, y1), CEILING_M]), '#8C8378', 1.5);
+  add(box([Math.min(x0, x1), Math.min(y0, y1), 0], [Math.max(x0, x1), Math.max(y0, y1), CEILING_M]), 'shell');
 
-  for (const p of room.pieces) add(box(p.lo, p.hi), p.colour, 2);
+  for (const p of room.pieces) add(box(p.lo, p.hi), 'piece', p.colour);
 
   for (const d of room.dressing) {
     if (d.kind !== 'art') continue;
@@ -67,7 +68,7 @@ export function roomWireframe(room: Room, cam: Camera, aspect: number): Stroke[]
     const [ax, ay, az] = d.at;
     const lo: Vec3 = onXWall ? [ax, ay - w, az - h] : [ax - w, ay, az - h];
     const hi: Vec3 = onXWall ? [ax, ay + w, az + h] : [ax + w, ay, az + h];
-    add(box(lo, hi), '#1B1A18', 2);
+    add(box(lo, hi), 'art');
   }
   return strokes;
 }

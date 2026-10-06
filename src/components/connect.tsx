@@ -4,7 +4,7 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import { DEFAULT_HOST, useServer, type Reachability } from '@/store/server';
 import { radius, spacing, typography, useAppTheme } from '@/theme';
 
-import { AppText, Button, Card } from './ui';
+import { AppText, Button } from './ui';
 
 const stripScheme = (host: string) => host.replace(/^https?:\/\//, '');
 
@@ -30,32 +30,34 @@ export function ConnectCard({ showDemo = true }: { showDemo?: boolean }) {
     setBusy(false);
   };
 
-  const inputStyle = [styles.input, typography.body, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }];
+  const inputStyle = [styles.input, typography.mono, { fontSize: 16, color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }];
 
   return (
-    <Card style={styles.card}>
-      <AppText variant="heading">Connect to CLSR Studio</AppText>
+    <View style={styles.card}>
       <AppText variant="caption">
-        The address of the PC running CLSR. The phone must be on the same network or ZeroTier. Port 8765 is added if you leave it out.
+        The PC running CLSR, over the same network or ZeroTier. Port 8765 is added if you leave it out.
       </AppText>
-      <TextInput
-        value={hostInput}
-        onChangeText={(t) => {
-          setHostInput(t);
-          setError(undefined);
-        }}
-        placeholder={stripScheme(DEFAULT_HOST)}
-        placeholderTextColor={colors.textFaint}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        returnKeyType="go"
-        onSubmitEditing={submit}
-        accessibilityLabel="Server address"
-        style={inputStyle}
-      />
       <View style={styles.field}>
-        <AppText variant="label">Access token (optional)</AppText>
+        <AppText variant="overline">Address</AppText>
+        <TextInput
+          value={hostInput}
+          onChangeText={(t) => {
+            setHostInput(t);
+            setError(undefined);
+          }}
+          placeholder={stripScheme(DEFAULT_HOST)}
+          placeholderTextColor={colors.textFaint}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          returnKeyType="go"
+          onSubmitEditing={submit}
+          accessibilityLabel="Server address"
+          style={inputStyle}
+        />
+      </View>
+      <View style={styles.field}>
+        <AppText variant="overline">Access token · optional</AppText>
         <TextInput
           value={tokenInput}
           onChangeText={(t) => {
@@ -79,10 +81,10 @@ export function ConnectCard({ showDemo = true }: { showDemo?: boolean }) {
         </AppText>
       )}
       <View style={styles.actions}>
-        <Button title="Connect" icon="link-outline" loading={busy} disabled={!hostInput.trim()} onPress={submit} style={styles.flex} />
+        <Button title="Connect" icon="radio-outline" variant="accent" loading={busy} disabled={!hostInput.trim()} onPress={submit} style={styles.flex} />
         {showDemo && <Button title="Try demo" variant="secondary" onPress={enterDemo} />}
       </View>
-    </Card>
+    </View>
   );
 }
 
