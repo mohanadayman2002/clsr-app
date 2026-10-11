@@ -1,12 +1,12 @@
 import Constants from 'expo-constants';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConnectCard } from '@/components/connect';
 import { StatusLine } from '@/components/status';
-import { AppText, Button, LiveDot, SectionHeader } from '@/components/ui';
+import { AppText, Blobs, Button, LiveDot, SectionHeader } from '@/components/ui';
 import { useServer } from '@/store/server';
-import { fonts, radius, spacing, TAB_BAR_CLEARANCE, typography, useAppTheme } from '@/theme';
+import { fonts, radius, shadow, spacing, TAB_BAR_CLEARANCE, typography, useAppTheme } from '@/theme';
 
 const SERVICES: { key: 'blender' | 'ollama' | 'coohom'; label: string; role: string }[] = [
   { key: 'blender', label: 'Blender', role: 'renders' },
@@ -18,11 +18,13 @@ export default function StudioLinkScreen() {
   const { host, demo, reachability, checkHealth, disconnect } = useServer();
   const { colors } = useAppTheme();
   const connected = !!host || demo;
+  const { width } = useWindowDimensions();
 
   return (
     <SafeAreaView edges={['top']} style={[styles.flex, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
+          <Blobs width={width} height={230} inset={spacing.xl} />
           <StatusLine />
           <View>
             <AppText variant="hero">Studio</AppText>
@@ -31,7 +33,7 @@ export default function StudioLinkScreen() {
         </View>
 
         {connected && (
-          <View style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.panel, shadow, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
             <AppText variant="overline">{demo ? 'Source' : 'Address'}</AppText>
             <AppText variant="monoLarge" numberOfLines={1} adjustsFontSizeToFit>
               {demo ? 'built-in demo' : host.replace(/^https?:\/\//, '')}
@@ -44,7 +46,7 @@ export default function StudioLinkScreen() {
                   const up = known && reachability.health[s.key];
                   const tint = !known ? colors.textFaint : up ? colors.success : colors.danger;
                   return (
-                    <View key={s.key} style={[styles.lamp, { borderColor: colors.border }]}>
+                    <View key={s.key} style={[styles.lamp, { backgroundColor: up ? colors.successSoft : colors.surfaceMuted, borderColor: 'transparent' }]}>
                       <LiveDot color={tint} pulsing={!!up} size={9} />
                       <AppText variant="label">{s.label}</AppText>
                       <AppText variant="overline" style={{ fontSize: 9 }}>

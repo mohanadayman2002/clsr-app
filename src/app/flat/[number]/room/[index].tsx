@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -20,12 +19,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { describeError, type Piece, type Project, type Room } from '@/api';
 import { FRAME_ASPECT, FrameImage, HotspotLayer } from '@/components/frame';
 import { FloorPlan } from '@/components/plan';
-import { AppText, Badge, Button, EmptyState, IconButton, Leader, PressableScale, SectionHeader } from '@/components/ui';
+import { AppText, Badge, Button, EmptyState, IconButton, Leader, PressableScale, RoomChip, SectionHeader } from '@/components/ui';
 import { formatEGP } from '@/lib/format';
 import { roomHotspots, type Hotspot, type HotspotTarget } from '@/lib/hotspots';
 import { useResource } from '@/lib/useResource';
 import { useApi } from '@/store/server';
-import { fonts, radius, spacing, typography, useAppTheme } from '@/theme';
+import { fonts, radius, roomTint, shadow, spacing, typography, useAppTheme } from '@/theme';
 
 export default function RoomScreen() {
   const { number, index, view } = useLocalSearchParams<{ number: string; index: string; view?: string }>();
@@ -124,11 +123,10 @@ function RoomView({ project, room, initialView }: { project: Project; room: Room
               </View>
             )}
           />
-          <LinearGradient colors={['rgba(15,14,12,0.75)', 'rgba(15,14,12,0)']} style={styles.topShade} pointerEvents="none" />
           <Pressable
             onPress={() => room.views.length > 1 && goTo((page + 1) % room.views.length)}
             accessibilityLabel="Plan of the flat. Tap for the next view."
-            style={[styles.minimap, { backgroundColor: colors.overlay, borderColor: 'rgba(242,237,228,0.15)' }]}>
+            style={[styles.minimap, shadow, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
             <FloorPlan rooms={project.rooms} width={92} highlightRoom={room.index} activeView={view?.stem} compact />
           </Pressable>
         </View>
@@ -138,8 +136,8 @@ function RoomView({ project, room, initialView }: { project: Project; room: Room
             {room.views.map((v, i) => {
               const active = i === page;
               return (
-                <Pressable key={v.stem} onPress={() => goTo(i)} style={[styles.viewTab, active && { borderBottomColor: colors.accent }]}>
-                  <Text style={[typography.overline, { color: active ? colors.text : colors.textFaint }]}>
+                <Pressable key={v.stem} onPress={() => goTo(i)} style={[styles.viewTab, { backgroundColor: active ? colors.accent : colors.surfaceMuted }]}>
+                  <Text style={[typography.overline, { color: active ? colors.onAccent : colors.textMuted }]}>
                     {String(i + 1).padStart(2, '0')} · {v.camera.wall ?? 'view'} · {v.lens}mm
                   </Text>
                 </Pressable>
@@ -150,9 +148,12 @@ function RoomView({ project, room, initialView }: { project: Project; room: Room
 
         <View style={styles.body}>
           <View style={styles.titleBlock}>
-            <AppText variant="overline" color="accent">
-              Room {String(room.index).padStart(2, '0')} · flat № {project.number}
-            </AppText>
+            <View style={styles.chipRow}>
+              <RoomChip label={room.label} />
+              <AppText variant="overline" color="textFaint">
+                flat № {project.number}
+              </AppText>
+            </View>
             <AppText variant="display">{room.title}</AppText>
             <AppText variant="mono" color="textMuted">
               {room.area_m2} m²{subtotal != null ? `  ·  ${formatEGP(subtotal)}` : ''}
@@ -186,13 +187,15 @@ function RoomView({ project, room, initialView }: { project: Project; room: Room
           {next && next.index !== room.index && (
             <PressableScale
               onPress={() => router.replace(`/flat/${project.number}/room/${next.index}`)}
-              style={[styles.next, { borderColor: colors.border }]}>
+              style={[styles.next, { backgroundColor: roomTint(next.label).fill, borderColor: roomTint(next.label).fill }]}>
               <View style={styles.flex}>
-                <AppText variant="overline">Next room</AppText>
+                <AppText variant="overline" style={{ color: roomTint(next.label).ink }}>
+                  Next room
+                </AppText>
                 <AppText variant="title">{next.title}</AppText>
               </View>
-              <View style={[styles.nextArrow, { backgroundColor: colors.text }]}>
-                <Ionicons name="arrow-forward" size={20} color={colors.onPrimary} />
+              <View style={[styles.nextArrow, { backgroundColor: roomTint(next.label).ink }]}>
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
               </View>
             </PressableScale>
           )}
@@ -294,10 +297,9 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   centerText: { textAlign: 'center' },
   content: { paddingBottom: spacing.xxl * 2 },
-  topShade: { position: 'absolute', top: 0, left: 0, right: 0, height: 110 },
   minimap: { position: 'absolute', right: spacing.md, bottom: spacing.md, padding: 6, borderRadius: radius.md, borderWidth: 1 },
-  viewStrip: { paddingHorizontal: spacing.xl, gap: spacing.lg },
-  viewTab: { paddingVertical: spacing.md, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  viewStrip: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.sm },
+  viewTab: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.pill },
   body: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.xxl },
   titleBlock: { gap: spacing.xs },
   specs: { gap: spacing.md },
@@ -312,7 +314,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   nextArrow: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(8,7,6,0.6)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(43,34,56,0.35)' },
+  chipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xs },
   sheet: {
     padding: spacing.xl,
     paddingTop: spacing.md,

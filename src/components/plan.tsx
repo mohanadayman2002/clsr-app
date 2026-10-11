@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, G, Line, Path, Pattern, Rect } from 'react-native-svg';
 
 import type { Room } from '@/api';
-import { typography, useAppTheme } from '@/theme';
+import { roomTint, typography, useAppTheme } from '@/theme';
 
 /** Half the horizontal field of view for a 36 mm-wide sensor. */
 const halfFov = (lens: number) => Math.atan(18 / (lens || 16));
@@ -47,7 +47,7 @@ export function FloorPlan({ rooms, width, highlightRoom, activeView, compact, on
   }, [rooms, width, compact]);
 
   const { rects, scale, height, at } = geo;
-  const wall = compact ? 1.25 : 2;
+  const wall = compact ? 1.5 : 2.5;
 
   const cones = rooms.flatMap((room) =>
     room.views.map((view, i) => {
@@ -80,6 +80,7 @@ export function FloorPlan({ rooms, width, highlightRoom, activeView, compact, on
           const [ax, ay] = at(x0, y1);
           const [bx, by] = at(x1, y0);
           const lit = room.index === highlightRoom;
+          const dim = highlightRoom != null && !lit;
           return (
             <Rect
               key={room.index}
@@ -87,9 +88,11 @@ export function FloorPlan({ rooms, width, highlightRoom, activeView, compact, on
               y={ay}
               width={bx - ax}
               height={by - ay}
-              fill={lit ? colors.accentSoft : colors.surface}
+              rx={compact ? 1.5 : 3}
+              fill={roomTint(room.label).fill}
+              fillOpacity={dim ? 0.45 : 1}
               stroke={lit ? colors.accent : colors.line}
-              strokeWidth={wall}
+              strokeWidth={lit ? wall + 1 : wall}
             />
           );
         })}
@@ -104,8 +107,15 @@ export function FloorPlan({ rooms, width, highlightRoom, activeView, compact, on
 
         {cones.map((c) => (
           <G key={c.key}>
-            <Path d={c.d} fill={colors.accent} opacity={c.active ? 0.55 : compact ? 0.18 : 0.22} />
-            <Circle cx={c.ex} cy={c.ey} r={c.active ? 4 : 2.5} fill={c.active ? colors.accent : colors.text} />
+            <Path d={c.d} fill={colors.accent} opacity={c.active ? 0.7 : compact ? 0.22 : 0.35} />
+            <Circle
+              cx={c.ex}
+              cy={c.ey}
+              r={c.active ? 4.5 : compact ? 2.5 : 4}
+              fill={c.active ? colors.accent : colors.surface}
+              stroke={colors.accent}
+              strokeWidth={compact ? 1 : 2}
+            />
           </G>
         ))}
       </Svg>
@@ -141,7 +151,7 @@ export function FloorPlan({ rooms, width, highlightRoom, activeView, compact, on
               ]}>
               {!compact && (
                 <View style={styles.roomLabel} pointerEvents="none">
-                  <Text style={[typography.overline, { color: colors.text, fontSize: small ? 8 : 10 }]} numberOfLines={2}>
+                  <Text style={[typography.overline, { color: roomTint(room.label).ink, fontSize: small ? 8 : 10 }]} numberOfLines={2}>
                     {room.title}
                   </Text>
                   <Text style={[typography.mono, styles.tiny, { color: colors.textMuted }]}>{room.area_m2} m²</Text>

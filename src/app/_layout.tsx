@@ -7,7 +7,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono/400Regular';
 import { JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono/500Medium';
 import { useFonts } from 'expo-font';
-import { DarkTheme, router, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -54,9 +54,9 @@ function RootNavigator() {
   if (!loaded) return null;
 
   const navTheme = {
-    ...DarkTheme,
+    ...DefaultTheme,
     colors: {
-      ...DarkTheme.colors,
+      ...DefaultTheme.colors,
       primary: colors.accent,
       background: colors.background,
       card: colors.background,
@@ -70,7 +70,7 @@ function RootNavigator() {
 
   return (
     <ThemeProvider value={navTheme}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShadowVisible: false,

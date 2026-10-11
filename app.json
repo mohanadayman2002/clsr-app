@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.clsr.app",
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0F0E0C",
+        "backgroundColor": "#FFF8F0",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -42,7 +42,7 @@
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
-          "backgroundColor": "#0F0E0C"
+          "backgroundColor": "#FFF8F0"
         }
       ],
       [
@@ -63,6 +63,6 @@
       "expo-secure-store"
     ],
     "scheme": "clsr",
-    "backgroundColor": "#0F0E0C"
+    "backgroundColor": "#FFF8F0"
   }
 }

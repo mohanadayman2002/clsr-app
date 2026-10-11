@@ -9,7 +9,7 @@ import { AppText, Button, EmptyState, Leader, LiveDot, PressableScale, SectionHe
 import { capitalize, formatEGP } from '@/lib/format';
 import { useResource } from '@/lib/useResource';
 import { useApi } from '@/store/server';
-import { fonts, radius, spacing, typography, useAppTheme } from '@/theme';
+import { fonts, radius, roomTint, shadow, spacing, typography, useAppTheme } from '@/theme';
 
 const CARD_WIDTH = 248;
 
@@ -55,8 +55,8 @@ function FlatView({ project, api, refreshing, onRefresh }: { project: Project; a
       <View style={{ width, height: width / FRAME_ASPECT + 90 }}>
         {hero && <FrameImage api={api} number={project.number} room={hero.room} view={hero.view} width={width} height={width / FRAME_ASPECT} />}
         <LinearGradient
-          colors={['rgba(15,14,12,0.7)', 'rgba(15,14,12,0)', 'rgba(15,14,12,0)', colors.background]}
-          locations={[0, 0.25, 0.55, 0.82]}
+          colors={['rgba(255,248,240,0)', 'rgba(255,248,240,0)', colors.background]}
+          locations={[0, 0.6, 0.86]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.heroCaption}>
@@ -85,7 +85,7 @@ function FlatView({ project, api, refreshing, onRefresh }: { project: Project; a
 
         <View>
           <SectionHeader index="01" title="Plan" />
-          <View style={[styles.planWrap, { borderColor: colors.border }]}>
+          <View style={[styles.planWrap, shadow, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
             <FloorPlan
               rooms={project.rooms}
               width={width - spacing.xl * 2 - spacing.md * 2}
@@ -143,14 +143,15 @@ function RoomCard({ api, number, room, subtotal, onPress }: { api: ClsrApi; numb
   const height = CARD_WIDTH / FRAME_ASPECT;
   return (
     <PressableScale onPress={onPress} style={[styles.roomCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.roomStripe, { backgroundColor: roomTint(room.label).ink }]} />
       <View style={{ width: CARD_WIDTH, height }}>
         {room.views[0] && <FrameImage api={api} number={number} room={room} view={room.views[0]} width={CARD_WIDTH} height={height} />}
-        <Text style={[typography.overline, styles.roomViews, { color: colors.text, backgroundColor: colors.overlay }]}>
+        <Text style={[typography.overline, styles.roomViews, { color: colors.text, backgroundColor: colors.surface }]}>
           {room.views.length} {room.views.length === 1 ? 'view' : 'views'}
         </Text>
       </View>
       <View style={styles.roomBody}>
-        <AppText variant="title" style={styles.roomTitle} numberOfLines={1}>
+        <AppText variant="title" style={[styles.roomTitle, { color: roomTint(room.label).ink }]} numberOfLines={1}>
           {room.title}
         </AppText>
         <View style={styles.roomMeta}>
@@ -173,7 +174,7 @@ function Receipt({ project }: { project: Project }) {
   const { colors } = useAppTheme();
   const { costs } = project;
   return (
-    <View style={[styles.receipt, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.receipt, shadow, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
       <View style={styles.receiptHead}>
         <View style={styles.flex}>
           <AppText variant="overline">Furnishing · {costs.tier}</AppText>
@@ -188,7 +189,12 @@ function Receipt({ project }: { project: Project }) {
 
       <View style={styles.lines}>
         {costs.rooms.map((r) => (
-          <Leader key={r.room} label={r.title} value={Math.round(r.subtotal).toLocaleString('en-US')} />
+          <View key={r.room} style={styles.line}>
+            <View style={[styles.lineDot, { backgroundColor: roomTint(r.title).ink }]} />
+            <View style={styles.flex}>
+              <Leader label={r.title} value={Math.round(r.subtotal).toLocaleString('en-US')} />
+            </View>
+          </View>
         ))}
       </View>
 
@@ -218,8 +224,11 @@ const styles = StyleSheet.create({
   hint: { marginTop: spacing.sm, fontFamily: fonts.displayItalic },
   bleed: { marginHorizontal: -spacing.xl },
   carousel: { paddingHorizontal: spacing.xl, gap: spacing.md },
-  roomCard: { width: CARD_WIDTH, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  roomViews: { position: 'absolute', top: spacing.sm, left: spacing.sm, fontSize: 9, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, overflow: 'hidden' },
+  roomCard: { width: CARD_WIDTH, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', marginBottom: spacing.lg },
+  roomStripe: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 5, zIndex: 1 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  lineDot: { width: 8, height: 8, borderRadius: 4 },
+  roomViews: { position: 'absolute', top: spacing.sm, left: spacing.sm, fontSize: 9, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.pill, overflow: 'hidden' },
   roomBody: { padding: spacing.md, gap: 2 },
   roomTitle: { fontSize: 20, lineHeight: 26 },
   roomMeta: { flexDirection: 'row', justifyContent: 'space-between' },

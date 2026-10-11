@@ -29,14 +29,15 @@ On first launch the address field is prefilled with the studio PC's ZeroTier add
 
 ## Design
 
-The app has a dark "studio" look so the renders supply the colour. Headings are set in Fraunces (serif), interface text in Inter, and measurements and prices in JetBrains Mono, like annotations on a drawing. Brass (`#E0A458`) marks anything you can act on.
+A light, playful "sunny studio": warm cream background, plum text instead of black, coral (`#FF6B4A`) for anything you can act on, and white cards with soft shadows. Headings are set in Fraunces (serif), interface text in Inter, and measurements and prices in JetBrains Mono.
 
-- **Floor plan** (`src/components/plan.tsx`): the flat drawn from each room's `rect_m`, north up, with a cone for every camera (its angle comes from the lens). Tap a room, or a cone to open that exact view. The same component is the mini-map on the room screen.
-- **Hotspots**: pulsing brass rings; the selected one shows its name.
+- **Room colours** (`roomTint` in `src/theme`): every room type has its own pastel fill and strong ink, picked from its label (living = peach, bedroom = lilac, bathroom = sky, kitchen = butter, balcony = mint…). The same colour is used on the plan, room chips, carousel cards, receipt lines and the "next room" card.
+- **Floor plan** (`src/components/plan.tsx`): the flat drawn from each room's `rect_m`, north up, with rooms filled in their colours and a coral cone for every camera (its angle comes from the lens). Tap a room, or a cone to open that exact view. The same component is the mini-map on the room screen.
+- **Hotspots**: coral dots with white rings and a pulsing halo, so they stand out on bright renders.
 - **The bill** is a receipt with dotted price lines and a tilted "Estimate · not a quotation" stamp, so an estimate never reads as a quote.
-- **Tab bar**: a floating pill, so photos run to the bottom edge.
+- **Decoration**: soft colour blobs behind the headlines, a yellow "№" sticker on flat covers, and a floating pill tab bar.
 
-Tokens live in `src/theme`; shared pieces (`Leader`, `Stamp`, `LiveDot`, `PressableScale`) live in `src/components/ui.tsx`.
+Tokens live in `src/theme`; shared pieces (`Leader`, `Stamp`, `RoomChip`, `Blobs`, `LiveDot`, `PressableScale`) live in `src/components/ui.tsx`.
 
 ## Layout
 

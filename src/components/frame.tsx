@@ -18,7 +18,7 @@ import Svg, { Defs, LinearGradient as SvgGradient, Polyline, Rect, Stop } from '
 import { DemoClsrApi, framePath, type ClsrApi, type Room, type View as FrameView } from '@/api';
 import type { Hotspot } from '@/lib/hotspots';
 import { roomWireframe, type Stroke } from '@/lib/wireframe';
-import { typography, useAppTheme } from '@/theme';
+import { roomTint, shadow, typography, useAppTheme } from '@/theme';
 
 /** CLSR frames are rendered at 1800×1350. */
 export const FRAME_ASPECT = 1800 / 1350;
@@ -86,20 +86,21 @@ export function FramePathImage({ api, path, width, height }: { api: ClsrApi; pat
 function DemoFrame({ room, view, width, height }: { room: Room; view: FrameView; width: number; height: number }) {
   const { colors } = useAppTheme();
   const strokes = useMemo(() => roomWireframe(room, view.camera, FRAME_ASPECT), [room, view]);
+  const tint = roomTint(room.label);
   const styleFor = (s: Stroke) =>
     s.kind === 'shell'
-      ? { stroke: colors.line, strokeWidth: 1.2, opacity: 0.7 }
+      ? { stroke: colors.line, strokeWidth: 1.3, opacity: 0.45 }
       : s.kind === 'art'
-        ? { stroke: colors.accent, strokeWidth: 1.6, opacity: 1 }
-        : { stroke: colors.text, strokeWidth: 1.3, opacity: 0.85 };
+        ? { stroke: colors.accent, strokeWidth: 2, opacity: 1 }
+        : { stroke: tint.ink, strokeWidth: 1.6, opacity: 0.9 };
   return (
     <View style={{ width, height }}>
       <Svg width={width} height={height}>
         <Defs>
           <SvgGradient id="room" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#1E1B17" />
-            <Stop offset="0.55" stopColor="#15130F" />
-            <Stop offset="1" stopColor="#201C17" />
+            <Stop offset="0" stopColor={tint.fill} />
+            <Stop offset="0.6" stopColor="#FFFDF9" />
+            <Stop offset="1" stopColor={tint.fill} />
           </SvgGradient>
         </Defs>
         <Rect x={0} y={0} width={width} height={height} fill="url(#room)" />
@@ -188,16 +189,16 @@ export function HotspotLayer({
                 styles.dot,
                 selected && styles.dotSelected,
                 {
-                  backgroundColor: selected || queued ? colors.accent : 'rgba(15,14,12,0.55)',
-                  borderColor: selected ? colors.text : colors.accent,
+                  backgroundColor: colors.accent,
+                  borderColor: selected ? colors.text : '#FFFFFF',
                 },
               ]}>
-              {!selected && <View style={[styles.core, { backgroundColor: queued ? colors.onAccent : colors.accent }]} />}
+              {!selected && <View style={[styles.core, { backgroundColor: queued ? colors.text : '#FFFFFF' }]} />}
             </Pressable>
             {selected && (
               <View
                 pointerEvents="none"
-                style={[styles.callout, h.u > 0.6 ? { right: RING - 2 } : { left: RING - 2 }, { backgroundColor: colors.overlay, borderColor: colors.accent }]}>
+                style={[styles.callout, h.u > 0.6 ? { right: RING - 2 } : { left: RING - 2 }, { backgroundColor: colors.surface, borderColor: colors.surface }, shadow]}>
                 <Text style={[typography.overline, { color: colors.accent }]} numberOfLines={1}>
                   {h.label}
                 </Text>
@@ -214,14 +215,17 @@ const styles = StyleSheet.create({
   demoTag: { position: 'absolute', left: 10, bottom: 10 },
   demoTagText: { fontSize: 9 },
   spot: { position: 'absolute', width: RING, height: RING, alignItems: 'center', justifyContent: 'center' },
-  ring: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 1.5 },
+  ring: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2.5 },
   dot: {
     width: DOT + 6,
     height: DOT + 6,
     borderRadius: (DOT + 6) / 2,
-    borderWidth: 1.5,
+    borderWidth: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   dotSelected: { width: 24, height: 24, borderRadius: 12, borderWidth: 3 },
   core: { width: 6, height: 6, borderRadius: 3 },

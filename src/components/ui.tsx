@@ -15,7 +15,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { fonts, radius, spacing, typography, useAppTheme, type Colors } from '@/theme';
+import Svg, { Circle } from 'react-native-svg';
+
+import { confetti, fonts, radius, roomTint, shadow, spacing, typography, useAppTheme, type Colors } from '@/theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -127,7 +129,7 @@ export function IconButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
-        plain ? styles.plain : { backgroundColor: colors.overlay, borderColor: 'rgba(242,237,228,0.18)' },
+        plain ? styles.plain : [{ backgroundColor: colors.surface, borderColor: colors.surface }, shadow],
         { opacity: pressed ? 0.7 : 1 },
         style,
       ]}>
@@ -148,7 +150,7 @@ export function Card({
   padded?: boolean;
 }) {
   const { colors } = useAppTheme();
-  const base = [styles.card, padded && styles.cardPadded, { backgroundColor: colors.surface, borderColor: colors.border }, style];
+  const base = [styles.card, padded && styles.cardPadded, shadow, { backgroundColor: colors.surface, borderColor: colors.border }, style];
   if (!onPress) return <View style={base}>{children}</View>;
   return (
     <PressableScale onPress={onPress} style={base}>
@@ -157,14 +159,49 @@ export function Card({
   );
 }
 
-/** Mono, uppercase tag. */
+/** Small filled tag. */
 export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'accent' | 'success' | 'warning' | 'danger' }) {
   const { colors } = useAppTheme();
-  const fg = { neutral: colors.textMuted, accent: colors.accent, success: colors.success, warning: colors.warning, danger: colors.danger }[tone];
+  const [fg, bg] = {
+    neutral: [colors.textMuted, colors.surfaceMuted],
+    accent: [colors.accent, colors.accentSoft],
+    success: [colors.success, colors.successSoft],
+    warning: [colors.warning, colors.warningSoft],
+    danger: [colors.danger, colors.dangerSoft],
+  }[tone];
   return (
-    <View style={[styles.badge, { borderColor: tone === 'neutral' ? colors.border : fg }]}>
+    <View style={[styles.badge, { backgroundColor: bg }]}>
       <Text style={[typography.overline, { color: fg, fontSize: 10 }]}>{label}</Text>
     </View>
+  );
+}
+
+/** A pill in a room's own colour. */
+export function RoomChip({ label, small }: { label: string; small?: boolean }) {
+  const tint = roomTint(label);
+  return (
+    <View style={[styles.roomChip, small && styles.roomChipSmall, { backgroundColor: tint.fill }]}>
+      <View style={[styles.roomChipDot, { backgroundColor: tint.ink }]} />
+      <Text style={[typography.label, { color: tint.ink, fontSize: small ? 11 : 13 }]} numberOfLines={1}>
+        {label.charAt(0).toUpperCase() + label.slice(1)}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * Soft colour blobs behind a heading. Purely decorative. Pass the screen width;
+ * `inset` is the parent's horizontal padding, so the blobs run to the screen edge.
+ */
+export function Blobs({ width, height = 220, inset = 0 }: { width: number; height?: number; inset?: number }) {
+  return (
+    <Svg width={width} height={height} style={{ position: 'absolute', top: -spacing.lg, left: -inset }} pointerEvents="none">
+      <Circle cx={width * 0.86} cy={height * 0.22} r={70} fill={confetti.sun} opacity={0.55} />
+      <Circle cx={width * 0.68} cy={height * 0.6} r={34} fill={confetti.lilac} opacity={0.55} />
+      <Circle cx={width * 0.97} cy={height * 0.72} r={46} fill={confetti.mint} opacity={0.5} />
+      <Circle cx={width * 0.55} cy={height * 0.12} r={12} fill={confetti.pink} opacity={0.8} />
+      <Circle cx={width * 0.78} cy={height * 0.92} r={8} fill={confetti.sky} opacity={0.9} />
+    </Svg>
   );
 }
 
@@ -269,7 +306,7 @@ export function EmptyState({
   const { colors } = useAppTheme();
   return (
     <View style={styles.empty}>
-      <View style={[styles.emptyIcon, { borderColor: colors.border }]}>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft }]}>
         <Ionicons name={icon} size={28} color={colors.accent} />
       </View>
       <AppText variant="title" style={styles.center}>
@@ -299,7 +336,10 @@ const styles = StyleSheet.create({
   plain: { backgroundColor: 'transparent', borderColor: 'transparent' },
   card: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   cardPadded: { padding: spacing.lg },
-  badge: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  badge: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
+  roomChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6 },
+  roomChipSmall: { paddingHorizontal: 9, paddingVertical: 4, gap: 5 },
+  roomChipDot: { width: 7, height: 7, borderRadius: 4 },
   leader: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   dotsBox: { flex: 1, height: 14, overflow: 'hidden' },
   dots: { fontFamily: fonts.mono, fontSize: 11, lineHeight: 14 },

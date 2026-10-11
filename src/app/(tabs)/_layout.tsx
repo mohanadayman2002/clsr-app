@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { IconName } from '@/components/ui';
-import { radius, spacing, typography, useAppTheme } from '@/theme';
+import { radius, shadow, spacing, typography, useAppTheme } from '@/theme';
 
 const ICONS: Record<string, [IconName, IconName]> = {
   index: ['albums-outline', 'albums'],
@@ -17,7 +17,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { bottom: Math.max(insets.bottom, spacing.md) }]} pointerEvents="box-none">
-      <View style={[styles.bar, { backgroundColor: 'rgba(25,23,20,0.94)', borderColor: colors.border }]}>
+      <View style={[styles.bar, shadow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {state.routes.map((route, i) => {
           const focused = state.index === i;
           const label = descriptors[route.key].options.title ?? route.name;
@@ -32,9 +32,9 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                 if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
               }}
-              style={[styles.tab, focused && { backgroundColor: colors.text }]}>
-              <Ionicons name={focused ? iconActive : icon} size={18} color={focused ? colors.onPrimary : colors.textMuted} />
-              {focused && <Text style={[typography.label, { color: colors.onPrimary }]}>{label}</Text>}
+              style={[styles.tab, focused && { backgroundColor: colors.accent }]}>
+              <Ionicons name={focused ? iconActive : icon} size={18} color={focused ? colors.onAccent : colors.textMuted} />
+              {focused && <Text style={[typography.label, { color: colors.onAccent }]}>{label}</Text>}
             </Pressable>
           );
         })}
@@ -60,11 +60,6 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
   },
   tab: {
     flexDirection: 'row',
