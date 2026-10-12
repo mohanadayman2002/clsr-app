@@ -11,7 +11,12 @@ export interface Resource<T> {
  * Loads `fetcher` on mount and whenever `key` changes. Keeps the last good data
  * while reloading so screens don't flash empty on refresh or polling.
  */
-export function useResource<T>(fetcher: (() => Promise<T>) | null, key: string): Resource<T> {
+export function useResource<T>(
+  fetcher: (() => Promise<T>) | null,
+  key: string,
+  /** Keep showing the previous key's data while the new key loads (e.g. a version bump). */
+  keepPrevious = false,
+): Resource<T> {
   // Data is tagged with the key it was loaded for, so a key change never shows stale data.
   const [loaded, setLoaded] = useState<{ key: string; value: T }>();
   const [error, setError] = useState<unknown>();
@@ -43,5 +48,5 @@ export function useResource<T>(fetcher: (() => Promise<T>) | null, key: string):
     reload();
   }, [reload]);
 
-  return { data: loaded?.key === key ? loaded.value : undefined, error, loading, reload };
+  return { data: loaded?.key === key || keepPrevious ? loaded?.value : undefined, error, loading, reload };
 }

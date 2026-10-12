@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import type { ClsrApi } from './client';
 import { ClsrError } from './errors';
 import type {
@@ -150,10 +152,15 @@ export class HttpClsrApi implements ClsrApi {
     const res = await this.post<{ job: Job }>(`/api/project/${n}/undo`, { id: historyId });
     return res.job;
   }
-  upload(input: UploadInput) {
+  async upload(input: UploadInput) {
     const form = new FormData();
-    // React Native's FormData accepts a { uri, name, type } file descriptor.
-    form.append('file', { uri: input.uri, name: input.name, type: input.mimeType } as unknown as Blob);
+    if (Platform.OS === 'web') {
+      // Browsers need the bytes; the picked URI is a blob: or data: URL.
+      form.append('file', await (await fetch(input.uri)).blob(), input.name);
+    } else {
+      // React Native's FormData accepts a { uri, name, type } file descriptor.
+      form.append('file', { uri: input.uri, name: input.name, type: input.mimeType } as unknown as Blob);
+    }
     form.append('mode', 'auto');
     form.append('road', 'assets');
     form.append('style', input.style);

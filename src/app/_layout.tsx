@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { IconButton } from '@/components/ui';
 import { ServerProvider, useServer } from '@/store/server';
+import { StudioProvider } from '@/store/studio';
 import { useAppTheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -23,7 +24,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ServerProvider>
-        <RootNavigator />
+        <StudioProvider>
+          <RootNavigator />
+        </StudioProvider>
       </ServerProvider>
     </SafeAreaProvider>
   );
