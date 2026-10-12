@@ -125,12 +125,12 @@ export class HttpClsrApi implements ClsrApi {
     return this.request<Catalog>(`/api/catalog?asset=${encodeURIComponent(asset)}&run=${run}`);
   }
   dressing(kind: 'art' | 'model', run: number, role?: string) {
-    const roleParam = role ? `&role=${encodeURIComponent(role)}` : '';
-    return this.request<DressingCatalog>(`/api/dressing?kind=${kind}${roleParam}&run=${run}`);
+    const extra = kind === 'model' ? `${role ? `&role=${encodeURIComponent(role)}` : ''}&run=${run}` : '';
+    return this.request<DressingCatalog>(`/api/dressing?kind=${kind}${extra}`);
   }
   async finishes(target: 'floor' | 'wall') {
-    const res = await this.request<{ finishes: Finish[] }>(`/api/finishes?target=${target}`);
-    return res.finishes;
+    const res = await this.request<Finish[] | { finishes: Finish[] }>(`/api/finishes?target=${target}`);
+    return Array.isArray(res) ? res : (res.finishes ?? []);
   }
   styles() {
     return this.request<Style[]>('/api/styles');

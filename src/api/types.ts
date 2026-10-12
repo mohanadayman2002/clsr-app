@@ -1,6 +1,7 @@
 /**
- * Types for the CLSR Studio HTTP API (JSON over plain HTTP, default port 8765).
- * These mirror the server payloads exactly; UI-only shapes live elsewhere.
+ * Types for the CLSR HTTP API (JSON over plain HTTP, port 8765), following
+ * GET /api/docs. Fields the docs don't pin down are optional or loosely typed:
+ * the live server is the source of truth.
  */
 
 export type Vec3 = [number, number, number];
@@ -8,8 +9,11 @@ export type Tier = 'budget' | 'comfort' | 'premium';
 export type Quality = 'draft' | 'preview' | 'final';
 
 export interface Health {
+  /** The plan reader can be driven. False: no new flats can start. */
   coohom: boolean;
+  /** The design model. False still builds, with rule-based layouts. */
   ollama: boolean;
+  /** The renderer. False: nothing can be built or changed. */
   blender: boolean;
 }
 
@@ -54,7 +58,8 @@ export interface Piece {
   swappable: boolean;
 }
 
-export type DressingKind = 'art' | 'model' | 'pendant';
+/** "art" for prints; lamps, plants and rugs are models in a role. */
+export type DressingKind = 'art' | 'model' | 'pendant' | (string & {});
 
 export interface Dressing {
   name: string;
@@ -62,6 +67,7 @@ export interface Dressing {
   role: string;
   label: string;
   at: Vec3;
+  /** For art, a path under /art/, e.g. designs/neoclassic/art/cameo_0.jpg. */
   current: string;
   frame?: string;
   width?: number;
@@ -106,23 +112,31 @@ export interface Costs {
   rooms: CostRoom[];
 }
 
-export type JobKind = 'batch' | 'swap' | 'colour' | 'finish' | 'dressing';
-export type JobStage = 'saving' | 'swap' | 'restyle' | 'render' | 'board' | 'done' | 'error';
+export type JobKind = 'batch' | 'swap' | 'colour' | 'finish' | 'dressing' | 'undo' | (string & {});
 
+/** A render job. The server is busy while GET /job returns a non-null job. */
 export interface Job {
   id: string;
-  kind: JobKind;
-  status: 'running' | 'done' | 'error';
-  stage: JobStage;
-  quality: Quality;
+  kind?: JobKind;
+  status?: string;
+  stage?: string;
+  quality?: Quality;
   room?: number;
   model_name?: string;
-  frames: string[];
-  done_frames: number;
+  frames?: string[];
+  done_frames?: number;
   message?: string;
   changes?: Change[];
+  /** Epoch seconds. */
   started?: number;
   finished?: number;
+}
+
+export interface Plan {
+  key: string;
+  label: string;
+  /** Ready-to-use server path, e.g. /runs/0029/input.png */
+  url: string;
 }
 
 /** GET /api/project/<n> */
@@ -133,6 +147,8 @@ export interface Project {
   camera_height_m: number;
   hero: string;
   costs: Costs;
+  plans?: Plan[];
+  map?: { walls?: unknown[]; holes?: unknown[]; rooms?: unknown[]; bounds?: unknown[] };
   rooms: Room[];
   job: Job | null;
   history: Job[];
@@ -151,17 +167,32 @@ export type Change =
       kind: 'dressing';
       room: number;
       piece: string;
-      choice: { image: string } | { frame: string } | { model: string };
+      /** Prints: `art` (a path like designs/<style>/art/<file>.jpg) and/or `frame`. Lamps, plants, rugs: `model`. */
+      choice: { art?: string; frame?: string; model?: string };
     };
 
+export type BuildStage =
+  | 'queued'
+  | 'capturing'
+  | 'measuring'
+  | 'building'
+  | 'done'
+  | 'error'
+  | 'awaiting_measurement'
+  | (string & {});
+
+/** GET /api/status/<n> */
 export interface BuildStatus {
   number: number;
-  status: string;
+  status: BuildStage;
+  /** Set when status is "error". */
   error: string | null;
-  mode: string;
   style: string;
+  mode: string;
   measurement?: unknown;
-  build?: unknown;
+  spans?: unknown[];
+  coohom_scale?: number | null;
+  /** The real build log, last 200 lines. */
   log: string[];
 }
 
@@ -236,13 +267,15 @@ export interface Palette {
 }
 
 export interface UploadInput {
-  /** Local file URI of the plan image. */
+  /** Local file URI of the plan image (PNG or JPG). */
   uri: string;
   name: string;
   mimeType: string;
+  /** A key from /api/styles. */
   style: string;
   tier?: Tier;
-  /** Total budget in EGP; used instead of `tier` when set. */
+  /** Total budget in EGP, used instead of `tier`. Under 1000 is ignored by the server. */
   budget?: number;
+  /** Changed colour parts from /api/palette. */
   palette?: Record<string, string>;
 }

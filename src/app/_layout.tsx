@@ -83,6 +83,8 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="flat/[number]/index" options={immersive} />
         <Stack.Screen name="flat/[number]/room/[index]" options={immersive} />
+        <Stack.Screen name="flat/[number]/bill" options={{ title: 'The bill', headerLeft: BackButton, headerStyle: { backgroundColor: colors.background } }} />
+        <Stack.Screen name="build/[number]" options={{ title: '', headerLeft: BackButton, headerStyle: { backgroundColor: colors.background } }} />
       </Stack>
     </ThemeProvider>
   );

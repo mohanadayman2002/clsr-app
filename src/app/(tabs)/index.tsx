@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +26,13 @@ export default function FlatsScreen() {
   const { colors } = useAppTheme();
   const flats = useResource(api ? () => api.projects() : null, host);
   const [refreshing, setRefreshing] = useState(false);
+  // New flats appear when a build finishes; refresh whenever this tab comes back.
+  const { reload } = flats;
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
+  );
   const count = flats.data?.length ?? 0;
   const { width } = useWindowDimensions();
 

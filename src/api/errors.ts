@@ -22,9 +22,9 @@ export class ClsrError extends Error {
 
 export function describeError(e: unknown): string {
   if (e instanceof ClsrError) {
-    if (e.kind === 'unreachable') return "Can't reach the CLSR server. Check that the PC is on and you're on the same network or VPN.";
+    if (e.kind === 'unreachable') return "Can't reach the CLSR server. Check that the studio PC is on and awake, and that this device is on ZeroTier.";
     if (e.kind === 'unauthorized') return 'The server rejected the access token. Check the token in the Server tab.';
-    if (e.kind === 'busy') return 'This flat is being changed right now. Try again when the current render finishes.';
+    if (e.kind === 'busy') return 'The server is rendering something else (one job at a time, for every flat). Try again when it finishes.';
     return e.message;
   }
   return e instanceof Error ? e.message : 'Something went wrong.';

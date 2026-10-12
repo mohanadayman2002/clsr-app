@@ -1,14 +1,21 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { describeError, type ClsrApi, type Project, type Room } from '@/api';
+import { useState } from 'react';
+
+import { ClsrError, describeError, type ClsrApi, type Job, type Project, type Room } from '@/api';
 import { FRAME_ASPECT, FrameImage } from '@/components/frame';
 import { FloorPlan } from '@/components/plan';
-import { AppText, Button, EmptyState, Leader, LiveDot, PressableScale, SectionHeader, Stamp } from '@/components/ui';
+import { ChangesTray } from '@/components/tray';
+import { AppText, Button, EmptyState, Leader, PressableScale, SectionHeader, Stamp } from '@/components/ui';
+import { confirm, notify } from '@/lib/confirm';
 import { capitalize, formatEGP } from '@/lib/format';
+import { roomNames } from '@/lib/rooms';
 import { useResource } from '@/lib/useResource';
 import { useApi } from '@/store/server';
+import { useFlatStudio } from '@/store/studio';
 import { fonts, radius, roomTint, shadow, spacing, typography, useAppTheme } from '@/theme';
 
 const CARD_WIDTH = 248;
@@ -18,7 +25,9 @@ export default function FlatScreen() {
   const n = Number(number);
   const api = useApi();
   const { colors } = useAppTheme();
-  const flat = useResource(() => api.project(n), `${n}`);
+  const studio = useFlatStudio(n);
+  // Refetch after every finished render, keeping the old data on screen meanwhile.
+  const flat = useResource(() => api.project(n), `${n}|${studio.version}`, true);
 
   if (!flat.data) {
     return (
@@ -43,17 +52,21 @@ export default function FlatScreen() {
 function FlatView({ project, api, refreshing, onRefresh }: { project: Project; api: ClsrApi; refreshing: boolean; onRefresh: () => void }) {
   const { colors } = useAppTheme();
   const { width } = useWindowDimensions();
+  const studio = useFlatStudio(project.number);
+  const names = roomNames(project.rooms);
+  const history = studio.jobState ? studio.history : project.history;
   const hero = findView(project, project.hero);
   const area = project.rooms.reduce((s, r) => s + r.area_m2, 0);
   const openRoom = (room: Room, view = 0) => router.push(`/flat/${project.number}/room/${room.index}?view=${view}`);
 
   return (
+    <>
     <ScrollView
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />}>
       <View style={{ width, height: width / FRAME_ASPECT + 90 }}>
-        {hero && <FrameImage api={api} number={project.number} room={hero.room} view={hero.view} width={width} height={width / FRAME_ASPECT} />}
+        {hero && <FrameImage api={api} number={project.number} room={hero.room} view={hero.view} width={width} height={width / FRAME_ASPECT} bust={studio.bustAt} />}
         <LinearGradient
           colors={['rgba(255,248,240,0)', 'rgba(255,248,240,0)', colors.background]}
           locations={[0, 0.6, 0.86]}
@@ -71,18 +84,6 @@ function FlatView({ project, api, refreshing, onRefresh }: { project: Project; a
       </View>
 
       <View style={styles.body}>
-        {project.job?.status === 'running' && (
-          <View style={[styles.job, { borderColor: colors.accent, backgroundColor: colors.accentSoft }]}>
-            <LiveDot color={colors.accent} />
-            <AppText variant="label" style={styles.flex}>
-              Rendering {project.job.done_frames}/{project.job.frames.length}
-            </AppText>
-            <AppText variant="overline" color="accent">
-              {project.job.stage}
-            </AppText>
-          </View>
-        )}
-
         <View>
           <SectionHeader index="01" title="Plan" />
           <View style={[styles.planWrap, shadow, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
@@ -96,6 +97,18 @@ function FlatView({ project, api, refreshing, onRefresh }: { project: Project; a
           <AppText variant="caption" style={styles.hint}>
             Tap a room, or a cone to stand where that camera stood.
           </AppText>
+          {project.plans && project.plans.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.carousel}>
+              {project.plans.map((p) => (
+                <View key={p.key} style={[styles.planCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Image source={api.imageSource(p.url)} style={styles.planImage} contentFit="contain" transition={150} accessibilityLabel={p.label} />
+                  <AppText variant="overline" style={styles.planLabel}>
+                    {p.label}
+                  </AppText>
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         <View>
@@ -113,6 +126,8 @@ function FlatView({ project, api, refreshing, onRefresh }: { project: Project; a
                 api={api}
                 number={project.number}
                 room={room}
+                name={names.get(room.index) ?? room.title}
+                bust={studio.bustAt}
                 subtotal={project.costs.rooms.find((c) => c.room === room.index)?.subtotal}
                 onPress={() => openRoom(room)}
               />
@@ -122,10 +137,61 @@ function FlatView({ project, api, refreshing, onRefresh }: { project: Project; a
 
         <View>
           <SectionHeader index="03" title="The bill" />
-          <Receipt project={project} />
+          <Receipt project={project} names={names} />
+          <Button title="Itemised bill and tiers" icon="receipt-outline" variant="secondary" onPress={() => router.push(`/flat/${project.number}/bill`)} style={styles.billButton} />
         </View>
+
+        {history.length > 0 && (
+          <View>
+            <SectionHeader index="04" title="Changes so far" />
+            <History flat={project.number} history={history} />
+          </View>
+        )}
       </View>
     </ScrollView>
+    <ChangesTray api={api} flat={project.number} />
+    </>
+  );
+}
+
+/** Rendered changes, newest first, each with Undo. Undo is itself a render, so it waits for a free server. */
+function History({ flat, history }: { flat: number; history: Job[] }) {
+  const { colors } = useAppTheme();
+  const studio = useFlatStudio(flat);
+  const [busyId, setBusyId] = useState<string>();
+
+  const undo = async (job: Job) => {
+    const ok = await confirm('Undo this change?', job.model_name ?? job.kind ?? 'This change', 'Undo');
+    if (!ok) return;
+    setBusyId(job.id);
+    try {
+      await studio.undo(job.id);
+    } catch (e) {
+      notify(e instanceof ClsrError && e.kind === 'busy' ? 'The server is busy' : 'Could not undo', describeError(e));
+    } finally {
+      setBusyId(undefined);
+    }
+  };
+
+  return (
+    <View style={styles.history}>
+      {history.map((h) => (
+        <View key={h.id} style={[styles.historyRow, { borderColor: colors.border }]}>
+          <View style={[styles.historyDot, { backgroundColor: h.status === 'error' ? colors.danger : colors.success }]} />
+          <View style={styles.flex}>
+            <AppText variant="label" numberOfLines={2}>
+              {h.model_name ?? h.kind ?? 'Change'}
+            </AppText>
+            <AppText variant="mono" color="textFaint">
+              {[h.quality, h.finished ? new Date(h.finished * 1000).toLocaleString() : undefined, h.frames?.length ? `${h.frames.length} frames` : undefined]
+                .filter(Boolean)
+                .join(' · ')}
+            </AppText>
+          </View>
+          <Button title="Undo" icon="arrow-undo" variant="ghost" compact loading={busyId === h.id} disabled={studio.running} onPress={() => undo(h)} />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -138,21 +204,37 @@ function findView(project: Project, image: string) {
   return room ? { room, view: room.views[0] } : undefined;
 }
 
-function RoomCard({ api, number, room, subtotal, onPress }: { api: ClsrApi; number: number; room: Room; subtotal?: number; onPress: () => void }) {
+function RoomCard({
+  api,
+  number,
+  room,
+  name,
+  bust,
+  subtotal,
+  onPress,
+}: {
+  api: ClsrApi;
+  number: number;
+  room: Room;
+  name: string;
+  bust?: number;
+  subtotal?: number;
+  onPress: () => void;
+}) {
   const { colors } = useAppTheme();
   const height = CARD_WIDTH / FRAME_ASPECT;
   return (
     <PressableScale onPress={onPress} style={[styles.roomCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[styles.roomStripe, { backgroundColor: roomTint(room.label).ink }]} />
       <View style={{ width: CARD_WIDTH, height }}>
-        {room.views[0] && <FrameImage api={api} number={number} room={room} view={room.views[0]} width={CARD_WIDTH} height={height} />}
+        {room.views[0] && <FrameImage api={api} number={number} room={room} view={room.views[0]} width={CARD_WIDTH} height={height} bust={bust} />}
         <Text style={[typography.overline, styles.roomViews, { color: colors.text, backgroundColor: colors.surface }]}>
           {room.views.length} {room.views.length === 1 ? 'view' : 'views'}
         </Text>
       </View>
       <View style={styles.roomBody}>
         <AppText variant="title" style={[styles.roomTitle, { color: roomTint(room.label).ink }]} numberOfLines={1}>
-          {room.title}
+          {name}
         </AppText>
         <View style={styles.roomMeta}>
           <AppText variant="mono" color="textMuted">
@@ -170,7 +252,7 @@ function RoomCard({ api, number, room, subtotal, onPress }: { api: ClsrApi; numb
 }
 
 /** The bill as a printed receipt, stamped so an estimate never reads as a quote. */
-function Receipt({ project }: { project: Project }) {
+function Receipt({ project, names }: { project: Project; names: Map<number, string> }) {
   const { colors } = useAppTheme();
   const { costs } = project;
   return (
@@ -192,7 +274,7 @@ function Receipt({ project }: { project: Project }) {
           <View key={r.room} style={styles.line}>
             <View style={[styles.lineDot, { backgroundColor: roomTint(r.title).ink }]} />
             <View style={styles.flex}>
-              <Leader label={r.title} value={Math.round(r.subtotal).toLocaleString('en-US')} />
+              <Leader label={names.get(r.room) ?? r.title} value={Math.round(r.subtotal).toLocaleString('en-US')} />
             </View>
           </View>
         ))}
@@ -216,7 +298,14 @@ function Receipt({ project }: { project: Project }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { paddingBottom: spacing.xxl * 2 },
+  content: { paddingBottom: 140 },
+  planCard: { width: 220, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', marginBottom: spacing.md },
+  planImage: { width: 220, height: 160 },
+  planLabel: { padding: spacing.sm },
+  billButton: { marginTop: spacing.md },
+  history: { gap: spacing.md },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: spacing.md },
+  historyDot: { width: 8, height: 8, borderRadius: 4 },
   heroCaption: { position: 'absolute', left: spacing.xl, right: spacing.xl, bottom: 0, gap: spacing.xs },
   body: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, gap: spacing.xxl },
   job: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderRadius: radius.pill, paddingRight: spacing.lg, paddingLeft: spacing.sm, height: 44 },

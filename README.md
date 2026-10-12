@@ -33,14 +33,19 @@ There is no demo mode and no sample data: everything shown comes from the server
 
 ## Status
 
-| # | Feature | State |
+Built against `GET /api/docs`; not yet run against the live server (the build sandbox isn't on ZeroTier).
+
+| # | Feature | Where |
 | --- | --- | --- |
-| – | Server address and token from `.env`, health check, unreachable/401 handling | done |
-| 1 | Browse flats → rooms → photos, swipe between views | done (pinch-zoom not yet) |
-| 2 | Hotspots on photos → picker | dots and detail sheet done; pickers next |
-| 3 | Queue changes → `batch` render → wait → undo | next |
-| 4 | Costs: room subtotals and whole-flat bill | totals shown; full bill next |
-| 5 | Upload a plan with style and budget, follow `/api/status` | next |
+| 1 | Flats list with covers, refreshed on focus | `(tabs)/index.tsx` |
+| 2 | Flat view: hero, floor plan, server `plans[]`, room carousel, bill summary, history with Undo | `flat/[number]/index.tsx` |
+| 2 | Room view: room tabs (repeated titles numbered, e.g. "Bathroom 2"), swipeable photos, dots, per-piece prices, room total | `flat/[number]/room/[index].tsx` |
+| 3 | Pick a replacement model, a colour, a print/frame, a lamp/plant/rug, or a floor/wall finish; queue them; send one `batch` | `components/picker.tsx`, `components/tray.tsx`, `lib/changes.ts` |
+| 3 | Job tracking: poll `/job` every 2.5 s until `job` is null, Render disabled meanwhile, `409` shown as "the server is busy", frames re-fetched with `?t=<ms>` | `store/studio.tsx` |
+| 4 | Whole-flat bill with tiers, every line, quoted vs estimated | `flat/[number]/bill.tsx` |
+| 5 | New flat: disabled with the reason when `health.coohom` (or `blender`) is false; plan + mood + tier or EGP budget; build screen polling `/api/status/<n>` with the live log | `(tabs)/new.tsx`, `build/[number].tsx` |
+
+Not done yet: pinch-zoom on photos, the manual-scale step (`awaiting_measurement` points to `/studio`), and editing palette parts on upload.
 
 ## Design
 

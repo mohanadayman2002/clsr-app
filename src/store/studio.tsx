@@ -1,33 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import type { Change, Job, JobState, Quality } from '@/api';
+import type { Job, JobState, Quality } from '@/api';
+import type { QueuedChange } from '@/lib/changes';
 
 import { useServer } from './server';
 
-const POLL_MS = 2500;
+export type { QueuedChange };
 
-/** A change the user has picked but not rendered yet. */
-export interface QueuedChange {
-  /** One queued change per target: picking again for the same target replaces it. */
-  target: string;
-  /** Hotspot id in the room, so its dot can show as queued. */
-  hotspotId: string;
-  room: number;
-  change: Change;
-  /** "Sofa → Oslo sofa" */
-  title: string;
-  detail?: string;
-  /** Price difference in EGP, when known. Always an estimate. */
-  delta?: number;
-  swatch?: string;
-  thumb?: string | null;
-}
+const POLL_MS = 2500;
 
 interface FlatState {
   queue: QueuedChange[];
   jobState?: JobState;
-  /** Bumped when a render finishes, so screens refetch and images bust their cache. */
+  /** Bumped when a render finishes, so screens refetch the flat. */
   version: number;
+  /** Time (ms) the last render finished, used as ?t= on frames so caches show the new picture. */
+  bustAt?: number;
   /** Last job that finished while the app was watching, for a "done" note. */
   finished?: Job;
   /** The view the user was last looking at, used as `view` for draft renders. */
@@ -85,7 +73,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const nowRunning = isActive(next.job);
         if (wasRunning && !nowRunning) {
           const finished = next.job?.id === wasRunning.id ? next.job : (next.history.find((h) => h.id === wasRunning.id) ?? { ...wasRunning, status: 'done' as const });
-          return { jobState: next, version: s.version + 1, finished };
+          return { jobState: next, version: s.version + 1, bustAt: Date.now(), finished };
         }
         return { jobState: next };
       });

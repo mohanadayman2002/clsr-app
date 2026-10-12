@@ -54,6 +54,12 @@ export function framePath(number: number, image: string, bust?: number): string 
   return bust ? `${path}?t=${bust}` : path;
 }
 
+/** Swatch image for a floor or wall finish. */
+export const swatchPath = (finishId: string) => `/swatch/${finishId}`;
+
+/** Image of a print: `/art/` + the print's path, e.g. designs/neoclassic/art/cameo_0.jpg. */
+export const artPath = (current: string) => `/art/${current.replace(/^\/+/, '')}`;
+
 /**
  * Percent-encodes each segment of a server path (model and image names contain
  * spaces). Segments are decoded first so an already-encoded path is not encoded twice.

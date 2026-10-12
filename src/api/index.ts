@@ -1,4 +1,4 @@
 export * from './types';
-export { encodePath, framePath, type ClsrApi } from './client';
+export { artPath, encodePath, framePath, swatchPath, type ClsrApi } from './client';
 export { ClsrError, describeError } from './errors';
 export { HttpClsrApi, normalizeHost } from './http';
