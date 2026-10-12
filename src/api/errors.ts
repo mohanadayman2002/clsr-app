@@ -7,9 +7,7 @@ export type ClsrErrorKind =
   | 'busy'
   | 'not_found'
   | 'bad_request'
-  | 'server'
-  /** Not available in demo mode. */
-  | 'unsupported';
+  | 'server';
 
 export class ClsrError extends Error {
   constructor(

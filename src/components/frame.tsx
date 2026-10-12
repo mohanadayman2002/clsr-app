@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -13,12 +13,10 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Svg, { Defs, LinearGradient as SvgGradient, Polyline, Rect, Stop } from 'react-native-svg';
 
-import { DemoClsrApi, framePath, type ClsrApi, type Room, type View as FrameView } from '@/api';
+import { framePath, type ClsrApi, type Room, type View as FrameView } from '@/api';
 import type { Hotspot } from '@/lib/hotspots';
-import { roomWireframe, type Stroke } from '@/lib/wireframe';
-import { roomTint, shadow, typography, useAppTheme } from '@/theme';
+import { shadow, typography, useAppTheme } from '@/theme';
 
 /** CLSR frames are rendered at 1800×1350. */
 export const FRAME_ASPECT = 1800 / 1350;
@@ -40,10 +38,7 @@ export function FrameBox({
   );
 }
 
-/**
- * One rendered view of a room. In demo mode there are no photos, so the room
- * is drawn from its camera and geometry with the same projection the hotspots use.
- */
+/** One rendered view of a room. */
 export function FrameImage({
   api,
   number,
@@ -61,7 +56,6 @@ export function FrameImage({
   height: number;
   bust?: number;
 }) {
-  if (api.isDemo) return <DemoFrame room={room} view={view} width={width} height={height} />;
   return (
     <Image
       source={api.imageSource(framePath(number, view.image, bust))}
@@ -76,52 +70,7 @@ export function FrameImage({
 
 /** A frame referenced only by server path, e.g. a project cover. */
 export function FramePathImage({ api, path, width, height }: { api: ClsrApi; path: string; width: number; height: number }) {
-  if (api instanceof DemoClsrApi) {
-    const frame = api.frameFor(path);
-    return frame ? <DemoFrame {...frame} width={width} height={height} /> : null;
-  }
   return <Image source={api.imageSource(path)} style={{ width, height }} contentFit="cover" transition={150} />;
-}
-
-function DemoFrame({ room, view, width, height }: { room: Room; view: FrameView; width: number; height: number }) {
-  const { colors } = useAppTheme();
-  const strokes = useMemo(() => roomWireframe(room, view.camera, FRAME_ASPECT), [room, view]);
-  const tint = roomTint(room.label);
-  const styleFor = (s: Stroke) =>
-    s.kind === 'shell'
-      ? { stroke: colors.line, strokeWidth: 1.3, opacity: 0.45 }
-      : s.kind === 'art'
-        ? { stroke: colors.accent, strokeWidth: 2, opacity: 1 }
-        : { stroke: tint.ink, strokeWidth: 1.6, opacity: 0.9 };
-  return (
-    <View style={{ width, height }}>
-      <Svg width={width} height={height}>
-        <Defs>
-          <SvgGradient id="room" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={tint.fill} />
-            <Stop offset="0.6" stopColor="#FFFDF9" />
-            <Stop offset="1" stopColor={tint.fill} />
-          </SvgGradient>
-        </Defs>
-        <Rect x={0} y={0} width={width} height={height} fill="url(#room)" />
-        {strokes.map((s, i) => (
-          <Polyline
-            key={i}
-            points={s.points.map(([u, v]) => `${u * width},${v * height}`).join(' ')}
-            {...styleFor(s)}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            fill="none"
-          />
-        ))}
-      </Svg>
-      {width >= 380 && (
-        <View style={styles.demoTag}>
-          <Text style={[typography.overline, styles.demoTagText, { color: colors.textMuted }]}>Demo · line render from camera data</Text>
-        </View>
-      )}
-    </View>
-  );
 }
 
 const DOT = 14;
@@ -212,8 +161,6 @@ export function HotspotLayer({
 }
 
 const styles = StyleSheet.create({
-  demoTag: { position: 'absolute', left: 10, bottom: 10 },
-  demoTagText: { fontSize: 9 },
   spot: { position: 'absolute', width: RING, height: RING, alignItems: 'center', justifyContent: 'center' },
   ring: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2.5 },
   dot: {

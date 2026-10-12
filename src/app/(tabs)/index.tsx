@@ -17,14 +17,14 @@ import { confetti, fonts, radius, shadow, spacing, TAB_BAR_CLEARANCE, typography
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 export default function FlatsScreen() {
-  const { api, demo, host, reachability, checkHealth } = useServer();
+  const { api, host, reachability, checkHealth } = useServer();
   // Don't sit through a request timeout when the health check already failed.
   const healthError =
-    demo || reachability.state === 'ok' || reachability.state === 'checking' || reachability.state === 'unknown'
+    reachability.state === 'ok' || reachability.state === 'checking' || reachability.state === 'unknown'
       ? undefined
       : new ClsrError(reachability.state, '');
   const { colors } = useAppTheme();
-  const flats = useResource(api ? () => api.projects() : null, `${host}|${demo}`);
+  const flats = useResource(api ? () => api.projects() : null, host);
   const [refreshing, setRefreshing] = useState(false);
   const count = flats.data?.length ?? 0;
   const { width } = useWindowDimensions();
@@ -77,7 +77,7 @@ export default function FlatsScreen() {
           ) : flats.loading ? (
             <View style={styles.loader}>
               <ActivityIndicator color={colors.accent} />
-              <AppText variant="overline">{demo ? 'Loading' : `Calling ${host.replace(/^https?:\/\//, '')}`}</AppText>
+              <AppText variant="overline">{`Calling ${host.replace(/^https?:\/\//, '')}`}</AppText>
             </View>
           ) : (
             <EmptyState icon="cube-outline" title="Nothing on the easel" message="Finished flats from CLSR will appear here." />

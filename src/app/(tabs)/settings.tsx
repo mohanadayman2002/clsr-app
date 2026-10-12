@@ -10,14 +10,14 @@ import { fonts, radius, shadow, spacing, TAB_BAR_CLEARANCE, typography, useAppTh
 
 const SERVICES: { key: 'blender' | 'ollama' | 'coohom'; label: string; role: string }[] = [
   { key: 'blender', label: 'Blender', role: 'renders' },
-  { key: 'ollama', label: 'Ollama', role: 'reasons' },
-  { key: 'coohom', label: 'Coohom', role: 'catalogue' },
+  { key: 'coohom', label: 'Coohom', role: 'reads plans' },
+  { key: 'ollama', label: 'Ollama', role: 'plans rooms' },
 ];
 
 export default function StudioLinkScreen() {
-  const { host, demo, reachability, checkHealth, disconnect } = useServer();
+  const { host, reachability, checkHealth, resetToDefaults } = useServer();
   const { colors } = useAppTheme();
-  const connected = !!host || demo;
+  const connected = !!host;
   const { width } = useWindowDimensions();
 
   return (
@@ -34,40 +34,38 @@ export default function StudioLinkScreen() {
 
         {connected && (
           <View style={[styles.panel, shadow, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
-            <AppText variant="overline">{demo ? 'Source' : 'Address'}</AppText>
+            <AppText variant="overline">Address</AppText>
             <AppText variant="monoLarge" numberOfLines={1} adjustsFontSizeToFit>
-              {demo ? 'built-in demo' : host.replace(/^https?:\/\//, '')}
+              {host.replace(/^https?:\/\//, '')}
             </AppText>
 
-            {!demo && (
-              <View style={styles.lamps}>
-                {SERVICES.map((s) => {
-                  const known = reachability.state === 'ok';
-                  const up = known && reachability.health[s.key];
-                  const tint = !known ? colors.textFaint : up ? colors.success : colors.danger;
-                  return (
-                    <View key={s.key} style={[styles.lamp, { backgroundColor: up ? colors.successSoft : colors.surfaceMuted, borderColor: 'transparent' }]}>
-                      <LiveDot color={tint} pulsing={!!up} size={9} />
-                      <AppText variant="label">{s.label}</AppText>
-                      <AppText variant="overline" style={{ fontSize: 9 }}>
-                        {!known ? '—' : up ? s.role : 'offline'}
-                      </AppText>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
+            <View style={styles.lamps}>
+              {SERVICES.map((s) => {
+                const known = reachability.state === 'ok';
+                const up = known && reachability.health[s.key];
+                const tint = !known ? colors.textFaint : up ? colors.success : colors.danger;
+                return (
+                  <View key={s.key} style={[styles.lamp, { backgroundColor: up ? colors.successSoft : colors.surfaceMuted, borderColor: 'transparent' }]}>
+                    <LiveDot color={tint} pulsing={!!up} size={9} />
+                    <AppText variant="label">{s.label}</AppText>
+                    <AppText variant="overline" style={{ fontSize: 9 }}>
+                      {!known ? '—' : up ? s.role : 'offline'}
+                    </AppText>
+                  </View>
+                );
+              })}
+            </View>
 
             <View style={styles.actions}>
-              {!demo && <Button title="Check again" icon="pulse" variant="secondary" compact onPress={checkHealth} />}
-              <Button title={demo ? 'Leave demo' : 'Disconnect'} variant="ghost" compact onPress={disconnect} />
+              <Button title="Check again" icon="pulse" variant="secondary" compact onPress={checkHealth} />
+              <Button title="Reset to default" variant="ghost" compact onPress={resetToDefaults} />
             </View>
           </View>
         )}
 
         <View>
           <SectionHeader title={connected ? 'Address and token' : 'Connect'} />
-          <ConnectCard showDemo={!demo} />
+          <ConnectCard />
         </View>
 
         <AppText variant="overline" style={styles.version}>

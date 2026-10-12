@@ -1,19 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { ClsrError, DemoClsrApi, HttpClsrApi, normalizeHost, type ClsrApi, type Health } from '@/api';
+import { ClsrError, HttpClsrApi, normalizeHost, type ClsrApi, type Health } from '@/api';
+import { config } from '@/config';
 import { secret } from '@/lib/secret';
 
-const STORAGE_KEY = 'clsr.server.v1';
+const STORAGE_KEY = 'clsr.server.v2';
 const TOKEN_KEY = 'clsr.token.v1';
 
-/** The studio PC's ZeroTier address; offered until the user saves another. */
-export const DEFAULT_HOST = 'http://10.37.122.125:8765';
+/** From .env; used until the user saves a different address on the device. */
+export const DEFAULT_HOST = normalizeHost(config.baseUrl);
 
 interface StoredServer {
   host: string;
-  demo: boolean;
-  /** Sent as X-CLSR-Token when the server runs with CLSR_TOKEN set. Kept in secure storage. */
+  /** Sent as X-CLSR-Token. Kept in secure storage. */
   token: string;
 }
 
@@ -28,19 +28,19 @@ interface ServerContextValue {
   ready: boolean;
   /** Normalised base URL, e.g. http://10.37.122.125:8765, or '' when unset. */
   host: string;
-  demo: boolean;
   token: string;
-  /** The active client, or null when neither a host nor demo mode is configured. */
+  /** The active client, or null when no address is configured. */
   api: ClsrApi | null;
   reachability: Reachability;
+  /** Health from the last successful check, if any. */
+  health?: Health;
   connect: (host: string, token: string) => Promise<Reachability>;
-  enterDemo: () => void;
-  disconnect: () => void;
+  /** Go back to the address and token from .env. */
+  resetToDefaults: () => void;
   checkHealth: () => Promise<void>;
 }
 
 const ServerContext = createContext<ServerContextValue | null>(null);
-const demoApi = new DemoClsrApi();
 
 async function probe(api: ClsrApi): Promise<Reachability> {
   try {
@@ -51,8 +51,10 @@ async function probe(api: ClsrApi): Promise<Reachability> {
   }
 }
 
+const DEFAULTS: StoredServer = { host: DEFAULT_HOST, token: config.token };
+
 export function ServerProvider({ children }: { children: ReactNode }) {
-  const [stored, setStored] = useState<StoredServer>({ host: '', demo: false, token: '' });
+  const [stored, setStored] = useState<StoredServer>(DEFAULTS);
   const [ready, setReady] = useState(false);
   const [reachability, setReachability] = useState<Reachability>({ state: 'unknown' });
   /** Host+token that `connect` just probed, so switching to it doesn't probe a second time. */
@@ -60,20 +62,22 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     Promise.all([AsyncStorage.getItem(STORAGE_KEY), secret.get(TOKEN_KEY)])
-      .then(([raw, token]) => setStored({ host: '', demo: false, ...(raw ? JSON.parse(raw) : {}), token: token ?? '' }))
+      .then(([raw, token]) => {
+        const saved = raw ? (JSON.parse(raw) as Partial<StoredServer>) : {};
+        setStored({ host: saved.host || DEFAULTS.host, token: token ?? DEFAULTS.token });
+      })
       .catch(() => {})
       .finally(() => setReady(true));
   }, []);
 
   const save = useCallback((next: StoredServer) => {
     setStored(next);
-    const { token, ...rest } = next;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(rest)).catch(() => {});
-    secret.set(TOKEN_KEY, token).catch(() => {});
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ host: next.host })).catch(() => {});
+    secret.set(TOKEN_KEY, next.token).catch(() => {});
   }, []);
 
   const api = useMemo<ClsrApi | null>(
-    () => (stored.demo ? demoApi : stored.host ? new HttpClsrApi(stored.host, stored.token || undefined) : null),
+    () => (stored.host ? new HttpClsrApi(stored.host, stored.token || undefined) : null),
     [stored],
   );
 
@@ -84,12 +88,13 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }, [api]);
 
   useEffect(() => {
-    if (!stored.demo && justProbed.current === `${stored.host}|${stored.token}`) {
+    if (!ready) return;
+    if (justProbed.current === `${stored.host}|${stored.token}`) {
       justProbed.current = undefined;
       return;
     }
     checkHealth();
-  }, [checkHealth, stored]);
+  }, [checkHealth, stored, ready]);
 
   const connect = useCallback(
     async (input: string, tokenInput: string) => {
@@ -99,9 +104,9 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       setReachability({ state: 'checking' });
       const result = await probe(new HttpClsrApi(host, token || undefined));
       setReachability(result);
-      // Save even when unreachable: the PC may simply be asleep or off the VPN.
+      // Save even when unreachable: the PC may simply be asleep or off ZeroTier.
       justProbed.current = `${host}|${token}`;
-      save({ host, demo: false, token });
+      save({ host, token });
       return result;
     },
     [save],
@@ -111,13 +116,12 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       host: stored.host,
-      demo: stored.demo,
       token: stored.token,
       api,
       reachability,
+      health: reachability.state === 'ok' ? reachability.health : undefined,
       connect,
-      enterDemo: () => save({ ...stored, demo: true }),
-      disconnect: () => save({ host: '', demo: false, token: '' }),
+      resetToDefaults: () => save(DEFAULTS),
       checkHealth,
     }),
     [ready, stored, api, reachability, connect, save, checkHealth],

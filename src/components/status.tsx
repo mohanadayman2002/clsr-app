@@ -7,13 +7,11 @@ import { LiveDot } from './ui';
 
 /** One mono line saying where the app is connected and whether the renderer is up. */
 export function StatusLine() {
-  const { demo, host, reachability } = useServer();
+  const { host, reachability } = useServer();
   const { colors } = useAppTheme();
   const address = host.replace(/^https?:\/\//, '');
 
-  const [color, text, pulsing] = demo
-    ? [colors.warning, 'Demo · sample flats', false]
-    : !host
+  const [color, text, pulsing] = !host
       ? [colors.textFaint, 'Not connected', false]
       : reachability.state === 'ok'
         ? reachability.health.blender

@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import type { ClsrApi } from './client';
+import { encodePath, type ClsrApi } from './client';
 import { ClsrError } from './errors';
 import type {
   BuildStatus,
@@ -38,8 +38,6 @@ export function normalizeHost(input: string): string {
 }
 
 export class HttpClsrApi implements ClsrApi {
-  readonly isDemo = false;
-
   /** `token` is only needed when the server runs with CLSR_TOKEN set. */
   constructor(
     readonly baseUrl: string,
@@ -47,7 +45,8 @@ export class HttpClsrApi implements ClsrApi {
   ) {}
 
   resolve(path: string): string {
-    return /^https?:\/\//i.test(path) ? path : `${this.baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+    if (/^https?:\/\//i.test(path)) return path;
+    return `${this.baseUrl}${encodePath(path.startsWith('/') ? path : `/${path}`)}`;
   }
 
   private authHeaders(): Record<string, string> {
@@ -66,7 +65,8 @@ export class HttpClsrApi implements ClsrApi {
     try {
       res = await fetch(this.resolve(path), {
         ...init,
-        headers: { ...this.authHeaders(), ...(init?.headers as Record<string, string> | undefined) },
+        // Always JSON: with Accept: text/html the server answers with an HTML sign-in page.
+        headers: { Accept: 'application/json', ...this.authHeaders(), ...(init?.headers as Record<string, string> | undefined) },
         signal: controller.signal,
       });
     } catch {

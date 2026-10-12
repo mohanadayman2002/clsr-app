@@ -48,10 +48,16 @@ interface StudioContextValue {
 }
 
 const StudioContext = createContext<StudioContextValue | null>(null);
+
+/**
+ * A job occupies the server until /job returns `job: null`. A job object that
+ * reports done or error has also finished, so either signal counts.
+ */
+export const isActive = (job: Job | null | undefined): job is Job => !!job && job.status !== 'done' && job.status !== 'error';
 const EMPTY: FlatState = { queue: [], version: 0 };
 
 export function StudioProvider({ children }: { children: ReactNode }) {
-  const { api, host, demo } = useServer();
+  const { api, host } = useServer();
   const [flats, setFlats] = useState<Record<number, FlatState>>({});
   const flatsRef = useRef(flats);
   useEffect(() => {
@@ -62,7 +68,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFlats({});
-  }, [host, demo]);
+  }, [host]);
 
   const patch = useCallback((n: number, fn: (s: FlatState) => Partial<FlatState>) => {
     setFlats((all) => {
@@ -75,8 +81,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const absorb = useCallback(
     (n: number, next: JobState) => {
       patch(n, (s) => {
-        const wasRunning = s.jobState?.job?.status === 'running' ? s.jobState.job : undefined;
-        const nowRunning = next.job?.status === 'running';
+        const wasRunning = isActive(s.jobState?.job) ? s.jobState?.job : undefined;
+        const nowRunning = isActive(next.job);
         if (wasRunning && !nowRunning) {
           const finished = next.job?.id === wasRunning.id ? next.job : (next.history.find((h) => h.id === wasRunning.id) ?? { ...wasRunning, status: 'done' as const });
           return { jobState: next, version: s.version + 1, finished };
@@ -103,7 +109,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timer = setInterval(() => {
       for (const [n, s] of Object.entries(flatsRef.current)) {
-        if (s.jobState?.job?.status === 'running') refreshJob(Number(n));
+        if (isActive(s.jobState?.job)) refreshJob(Number(n));
       }
     }, POLL_MS);
     return () => clearInterval(timer);
@@ -171,7 +177,7 @@ export function useFlatStudio(n: number) {
   return {
     ...state,
     job,
-    running: job?.status === 'running',
+    running: isActive(job),
     history: state.jobState?.history ?? [],
     enqueue: (item: QueuedChange) => studio.enqueue(n, item),
     dequeue: (target: string) => studio.dequeue(n, target),

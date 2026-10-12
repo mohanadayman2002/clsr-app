@@ -16,8 +16,8 @@ function failureMessage(result: Reachability): string | undefined {
 }
 
 /** Host and optional token entry, used on first run and in the Server tab. */
-export function ConnectCard({ showDemo = true }: { showDemo?: boolean }) {
-  const { host, token, connect, enterDemo } = useServer();
+export function ConnectCard() {
+  const { host, token, connect } = useServer();
   const { colors } = useAppTheme();
   const [hostInput, setHostInput] = useState(stripScheme(host || DEFAULT_HOST));
   const [tokenInput, setTokenInput] = useState(token);
@@ -82,7 +82,6 @@ export function ConnectCard({ showDemo = true }: { showDemo?: boolean }) {
       )}
       <View style={styles.actions}>
         <Button title="Connect" icon="radio-outline" variant="accent" loading={busy} disabled={!hostInput.trim()} onPress={submit} style={styles.flex} />
-        {showDemo && <Button title="Try demo" variant="secondary" onPress={enterDemo} />}
       </View>
     </View>
   );

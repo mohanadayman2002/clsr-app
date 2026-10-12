@@ -1,4 +1,5 @@
 import { ClsrError } from '../errors';
+import { encodePath, framePath } from '../client';
 import { HttpClsrApi, normalizeHost } from '../http';
 
 function mockFetch(status: number, body: unknown) {
@@ -76,5 +77,49 @@ describe('HttpClsrApi', () => {
     }) as unknown as typeof fetch;
     const err = await new HttpClsrApi('http://h:8765').projects().catch((e) => e);
     expect(err.kind).toBe('unreachable');
+  });
+});
+
+describe('request headers', () => {
+  it('always asks for JSON, never HTML', async () => {
+    const fn = mockFetch(200, []);
+    await new HttpClsrApi('http://h:8765', 't').projects();
+    expect(headersOf(fn).Accept).toBe('application/json');
+  });
+});
+
+describe('encodePath', () => {
+  it('percent-encodes each segment, keeping slashes', () => {
+    expect(encodePath('/thumbs/sofas/Sofa Kivik 3-seat.png')).toBe('/thumbs/sofas/Sofa%20Kivik%203-seat.png');
+  });
+
+  it('does not double-encode an already-encoded path', () => {
+    expect(encodePath('/thumbs/Sofa%20Kivik.png')).toBe('/thumbs/Sofa%20Kivik.png');
+  });
+
+  it('leaves the query string alone', () => {
+    expect(encodePath('/runs/0031/a b.png?t=1700000000000')).toBe('/runs/0031/a%20b.png?t=1700000000000');
+  });
+
+  it('encodes characters that would break a URL', () => {
+    expect(encodePath('/art/50% off #2.jpg')).toBe('/art/50%25%20off%20%232.jpg');
+  });
+});
+
+describe('frame URLs', () => {
+  const api = new HttpClsrApi('http://10.37.122.125:8765', 't');
+
+  it('builds the frame path with a padded run number', () => {
+    expect(framePath(31, '09_living_and_dining_S_L16.png')).toBe('/runs/0031/result/final/frames/09_living_and_dining_S_L16.png');
+  });
+
+  it('adds ?t=<ms> to bust caches after a render', () => {
+    expect(api.resolve(framePath(31, '09 living.png', 1760000000000))).toBe(
+      'http://10.37.122.125:8765/runs/0031/result/final/frames/09%20living.png?t=1760000000000',
+    );
+  });
+
+  it('carries the token on image requests', () => {
+    expect(api.imageSource('/runs/0031/x.png').headers).toEqual({ 'X-CLSR-Token': 't' });
   });
 });

@@ -14,13 +14,28 @@ npm run typecheck
 npm run lint
 ```
 
-On first launch the address field is prefilled with the studio PC's ZeroTier address, `http://10.37.122.125:8765`. Tap **Connect**, or change the address; the port is added if you leave it out. The **access token** field is only needed if the server runs with `CLSR_TOKEN` set. You can change both later in the **Server** tab, and they are remembered (the token goes in the Keychain/Keystore). Or tap **Try demo**. Demo mode uses built-in sample flats and draws each frame as a line drawing from its camera data, since there are no real photos.
+### Configure the backend
+
+Copy `.env.example` to `.env` and fill in the token:
+
+```
+EXPO_PUBLIC_CLSR_URL=http://10.37.122.125:8765
+EXPO_PUBLIC_CLSR_TOKEN=<value of CLSR_TOKEN on the server>
+```
+
+`.env` is git-ignored. Both values change when the backend moves off the studio PC, so they live in config, not source. They are inlined into the app bundle, so the token is a shared key for this deployment rather than a per-user secret. The **Studio link** screen can override the address and token on a device; "Reset to default" goes back to `.env`.
+
+### Reaching the server
+
+The backend is a Windows PC on the ZeroTier network `743993800fc8ab19`. The phone must join that network and be authorised by its owner before the app can connect. If `/api/health` times out, the PC is off, asleep, off ZeroTier, or its firewall is blocking port 8765.
+
+There is no demo mode and no sample data: everything shown comes from the server.
 
 ## Status
 
 | # | Feature | State |
 | --- | --- | --- |
-| – | Server address, health check, unreachable-server handling, demo mode | done |
+| – | Server address and token from `.env`, health check, unreachable/401 handling | done |
 | 1 | Browse flats → rooms → photos, swipe between views | done (pinch-zoom not yet) |
 | 2 | Hotspots on photos → picker | dots and detail sheet done; pickers next |
 | 3 | Queue changes → `batch` render → wait → undo | next |
@@ -47,11 +62,9 @@ src/
     types.ts     Server payloads, typed exactly as the API returns them
     client.ts    ClsrApi interface + framePath()
     http.ts      Real client: base-URL normalising, timeouts, {"error"} → ClsrError (409 → "busy")
-    demo.ts      Sample flats in the same shape as the API
     errors.ts    ClsrError kinds and user-facing messages
   lib/
     hotspots.ts  project() + aim points + declutter + grouping (unit-tested)
-    wireframe.ts Line drawings of rooms for demo mode
   store/server.tsx  Saved host, active client, health state
   app/            (tabs)/index = flats, (tabs)/settings = server, flat/[number], flat/[number]/room/[index]
 ```
@@ -70,7 +83,14 @@ The tests check the maths against hand-computed values. They have not yet been c
 
 ## Networking
 
-- Every request, image loads included, carries `X-CLSR-Token` when a token is set. A **401** shows as "token rejected" and a **409** as "this flat is being changed". Neither is treated as a crash.
+- Every request, image loads included, carries `X-CLSR-Token`. API calls send `Accept: application/json`; with `text/html` the server answers with an HTML sign-in page instead of a JSON error.
+- A **401** shows as "token rejected". A **409** means the server's single render slot is busy (one job at a time across all flats); it is shown as "the server is busy", not as an error in the request.
+- Server paths are percent-encoded per segment before use (model and image names contain spaces), and frames get `?t=<ms>` after a render so image caches don't show the old picture.
 - If the health check fails, the app shows the unreachable state right away instead of waiting for request timeouts.
 
-The server uses plain HTTP on a LAN or VPN address, so `app.json` allows cleartext traffic. On Android this is `usesCleartextTraffic` via `expo-build-properties`. On iOS it is the ATS `NSAllowsArbitraryLoads` setting plus a local-network usage string. Tighten this if the server ever moves to a hosted HTTPS address.
+The server is plain HTTP on a private IP, which both platforms block by default. `app.json` allows it:
+
+- **Android:** `usesCleartextTraffic: true` via `expo-build-properties`. Verified in the generated release manifest (`src/main/AndroidManifest.xml`), not only the debug one.
+- **iOS:** an App Transport Security exception (`NSAllowsArbitraryLoads`, `NSAllowsLocalNetworking`) plus `NSLocalNetworkUsageDescription`. Verified in the generated `Info.plist`.
+
+Expo Go already allows cleartext, so the first test that proves this config is a development or release build on a real device over ZeroTier. Tighten it when the backend moves to HTTPS.

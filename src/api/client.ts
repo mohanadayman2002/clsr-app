@@ -18,14 +18,8 @@ import type {
   UploadInput,
 } from './types';
 
-/**
- * Everything the app calls on CLSR Studio. `HttpClsrApi` talks to the real
- * server; `DemoClsrApi` serves built-in sample data so the app is usable
- * without one.
- */
+/** Everything the app calls on CLSR. Implemented over HTTP by `HttpClsrApi`. */
 export interface ClsrApi {
-  readonly isDemo: boolean;
-
   /** Absolute URL for a server path such as `/thumbs/...` or `/runs/...`. */
   resolve(path: string): string;
 
@@ -51,8 +45,34 @@ export interface ClsrApi {
   upload(input: UploadInput): Promise<{ number: number; mode: string }>;
 }
 
-/** Server path of a rendered frame; `bust` is appended as ?t= after a re-render. */
+/**
+ * Server path of a rendered frame. Pass `bust` (a millisecond timestamp) after
+ * a render: the same URL returns a new picture, and image caches would keep the old one.
+ */
 export function framePath(number: number, image: string, bust?: number): string {
   const path = `/runs/${String(number).padStart(4, '0')}/result/final/frames/${image}`;
   return bust ? `${path}?t=${bust}` : path;
+}
+
+/**
+ * Percent-encodes each segment of a server path (model and image names contain
+ * spaces). Segments are decoded first so an already-encoded path is not encoded twice.
+ * The query string is left as is.
+ */
+export function encodePath(path: string): string {
+  const q = path.indexOf('?');
+  const [pathname, query] = q === -1 ? [path, ''] : [path.slice(0, q), path.slice(q)];
+  const encoded = pathname
+    .split('/')
+    .map((seg) => {
+      let raw = seg;
+      try {
+        raw = decodeURIComponent(seg);
+      } catch {
+        // Not valid percent-encoding; encode it as typed.
+      }
+      return encodeURIComponent(raw);
+    })
+    .join('/');
+  return encoded + query;
 }
